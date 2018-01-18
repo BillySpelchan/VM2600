@@ -71,9 +71,9 @@ fun main(args: Array<String>) {
         assembler.assembleProgram(assemblyList)
 
         // note - in future add support for multibank assembly
-        for (cntrRom in 0..assembler.bankSize-1) {
-            byteData[cntrRom] = assembler.banks[0][cntrRom].toByte()
-            memoryManager.write(cntrRom, assembler.banks[0][cntrRom])
+        for (cntrRom in 0..assembler.currentBank.size-1) {
+            byteData[cntrRom] = assembler.currentBank.readBankAddress(cntrRom).toByte()
+            memoryManager.write(cntrRom, assembler.currentBank.readBankAddress(cntrRom))
         }
         VM2600(memoryManager).dump(0, 255)
 

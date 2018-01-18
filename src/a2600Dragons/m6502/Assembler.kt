@@ -1,6 +1,6 @@
 package a2600Dragons.m6502
 
-import com.sun.javaws.exceptions.InvalidArgumentException
+class AssemblyException(s:String) : Throwable(s)
 
 /** Types of token types used by the assembler */
 enum class AssemblerTokenTypes {
@@ -45,6 +45,70 @@ data class AssemblerLabel(val labelName:String,
                           val addressOrValue: Int,
                           val bank:Int = 0)
 
+/** Bank for storing resulting machine language data */
+class AssemblyBank(val number:Int, var size:Int = 4096, var bankOrigin:Int = 0) {
+    //
+    var storage:ByteArray = ByteArray(size)
+    var curAddress:Int = bankOrigin
+
+    fun curCPUAddress():Int {
+        return curAddress + bankOrigin;
+    }
+
+    fun readBankAddress(offset:Int):Int {
+        if ((offset < 0) or (offset >= size))
+            throw OutOfMemoryError("Requested address not in assembly bank")
+        return (storage[offset].toInt() and 255)
+
+    }
+
+    /** writes byte to next assembly address incremeting address.
+     * @return the next CPU Address
+     * @throws AssemblyException if try to write past end of bank
+     */
+    fun writeNextByte(data:Int):Int {
+        if (curAddress >= size)
+            throw AssemblyException("Past end of assembly bank")
+        storage.set(curAddress, data.toByte())
+        ++curAddress
+        return curAddress + bankOrigin
+    }
+
+    /** Writes byte at indicated bank address (0 being start of bank)
+     * @throws AssemblyException if requested byte not within bank range
+     */
+    fun writeBankByte(offset:Int, data:Int) {
+        if ((offset < 0) or (offset >= size))
+            throw OutOfMemoryError("Requested address not in assembly bank")
+        storage.set(offset, data.toByte())
+    }
+
+    /** Writes to bank using CPU relative address (so relative to bank origin)
+     * @throws AssemblyException if requested byte not within bank range
+     */
+    fun writeCPUByte(address:Int, data:Int) {
+        writeBankByte(address - bankOrigin, data)
+    }
+
+    fun resized(bankSize:Int) {
+        if (size == bankSize)
+            return;
+        val oldSize = size
+        val oldStorage = storage
+        storage = ByteArray(bankSize)
+        size = bankSize
+        val bytesToCopy = Math.min(oldSize, size);
+        for (offset in 0..(bytesToCopy-1))
+            storage[offset] = oldStorage[offset]
+    }
+
+    fun bankToIntArray():Array<Int> {
+        val list = Array<Int> (size, {cntr -> storage[cntr].toInt() and 255})
+        return list;
+    }
+}
+
+
 /**
  * Assembles code into assembly language. I am using a 1.5 pass approach where labels are tracked durring the first
  * pass with the addresses set to proper values during a linking phase where the list of labels are parsed and code
@@ -53,13 +117,12 @@ data class AssemblerLabel(val labelName:String,
 class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
     var mapOfOpCodes = HashMap<String, ArrayList<M6502Instruction>>()
     var assemblyLine = 0
-    var bankSize = 4096
-    var addressInMemory = 0
-    var assemblyAddress = 0
-    var currentBank = 0
+//    var addressInMemory = 0
+//    var assemblyAddress = 0
+    var currentBank = AssemblyBank(0)
 
     var labelList = HashMap<String, ArrayList<AssemblerLabel>>()
-    var banks = ArrayList<Array<Int>>()
+    var banks = ArrayList<AssemblyBank>()
 
     /** build a hash-map of the mnemonics with all of the op codes so a particular mnemonic can seek out addressing
      * modes th    var currentBank = 0;
@@ -73,6 +136,7 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
                 mapOfOpCodes.put(inst.OPString, arrayListOf<M6502Instruction>(inst))
             }
         }
+        banks.add(currentBank)
     }
 
     /** Verbose mode prints out extra details while assembling the program */
@@ -128,27 +192,27 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
                         AssemblerLabelTypes.RELATIVE_ADDRESS -> {
                             val baseAddress = asmlink.addressOrValue + 1
                             val offset = (linkTarget.addressOrValue - baseAddress) and 255
-                            banks[asmlink.bank][asmlink.addressOrValue] = offset
+                            banks[asmlink.bank].writeBankByte(asmlink.addressOrValue, offset)
                         }
 
                         AssemblerLabelTypes.TARGET_VALUE -> {/*Ignore*/}
 
                         AssemblerLabelTypes.HIGH_BYTE -> {
                             val targetHigh:Int = (linkTarget.addressOrValue / 256) and 255
-                            banks[asmlink.bank][asmlink.addressOrValue] = targetHigh
+                            banks[asmlink.bank].writeBankByte(asmlink.addressOrValue,  targetHigh)
                         }
 
                         AssemblerLabelTypes.LOW_BYTE ,
                         AssemblerLabelTypes.ZERO_PAGE_ADDRESS -> {
                             val targetLow = linkTarget.addressOrValue and 255
-                            banks[asmlink.bank][asmlink.addressOrValue] = targetLow
+                            banks[asmlink.bank].writeBankByte(asmlink.addressOrValue, targetLow)
                         }
 
                         AssemblerLabelTypes.ADDRESS -> {
                             val targetLow = linkTarget.addressOrValue and 255
-                            banks[asmlink.bank][asmlink.addressOrValue] = targetLow
+                            banks[asmlink.bank].writeBankByte(asmlink.addressOrValue, targetLow)
                             val targetHigh:Int = (linkTarget.addressOrValue / 256) and 255
-                            banks[asmlink.bank][asmlink.addressOrValue+1] = targetHigh
+                            banks[asmlink.bank].writeBankByte(asmlink.addressOrValue+1, targetHigh)
                         }
                     }
                     if (asmlink.typeOfLabel != AssemblerLabelTypes.TARGET_VALUE)
@@ -344,7 +408,7 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
         // see if line starts with a label
         if (tokens[indx].type == AssemblerTokenTypes.LABEL_DECLARATION) {
             // add label system
-            addLabel(AssemblerLabel(tokens[indx].contents, AssemblerLabelTypes.TARGET_VALUE, assemblyAddress, currentBank))
+            addLabel(AssemblerLabel(tokens[indx].contents, AssemblerLabelTypes.TARGET_VALUE, currentBank.curAddress, currentBank.number))
             ++indx
             if (indx >= tokens.size)
                 return resultArray
@@ -358,7 +422,7 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
 
         // if reach here and not an opcode not a valid line
         if (tokens[indx].type != AssemblerTokenTypes.OPCODE)
-            throw InvalidArgumentException(arrayOf("Expecting an OP code, got ${tokens[indx].type}"))
+            throw AssemblyException("Expecting an OP code, got ${tokens[indx].type}")
 
         val opString = tokens[indx].contents
         ++indx
@@ -375,36 +439,36 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
                         resultArray = createAssemblyInstruction(opString, AddressMode.ACCUMULATOR, 0)
                     } else if (getOpcodeWithAddressMode(opString, AddressMode.RELATIVE) > 0) {
                         // add relative label link
-                        addLabel(AssemblerLabel(labelString, AssemblerLabelTypes.RELATIVE_ADDRESS, assemblyAddress+1, currentBank))
+                        addLabel(AssemblerLabel(labelString, AssemblerLabelTypes.RELATIVE_ADDRESS, currentBank.curAddress+1, currentBank.number))
                         resultArray = createAssemblyInstruction(opString, AddressMode.RELATIVE, 0)
                     } else if (indx >= tokens.size) {
                         // add address label link
-                        addLabel(AssemblerLabel(labelString, AssemblerLabelTypes.ADDRESS, assemblyAddress+1, currentBank))
+                        addLabel(AssemblerLabel(labelString, AssemblerLabelTypes.ADDRESS, currentBank.curAddress+1, currentBank.number))
                         resultArray = createAssemblyInstruction(opString, AddressMode.ABSOLUTE, 0)
                     } else {
                         val indexToken = tokens[indx];
                         ++indx
                         if (indexToken.type == AssemblerTokenTypes.INDEX_X) {
                             // add address label link
-                            addLabel(AssemblerLabel(labelString, AssemblerLabelTypes.ADDRESS, assemblyAddress + 1, currentBank))
+                            addLabel(AssemblerLabel(labelString, AssemblerLabelTypes.ADDRESS, currentBank.curAddress+1, currentBank.number))
                             resultArray = createAssemblyInstruction(opString, AddressMode.ABSOLUTE_X, 0)
                         } else if (indexToken.type == AssemblerTokenTypes.INDEX_Y) {
                             // add address label link
-                            addLabel(AssemblerLabel(labelString, AssemblerLabelTypes.ADDRESS, assemblyAddress+1, currentBank))
+                            addLabel(AssemblerLabel(labelString, AssemblerLabelTypes.ADDRESS, currentBank.curAddress+1, currentBank.number))
                             resultArray = createAssemblyInstruction(opString, AddressMode.ABSOLUTE_Y, 0)
                         } else
-                            throw InvalidArgumentException(arrayOf("Unexpected tokens after label"))
+                            throw AssemblyException("Unexpected tokens after label")
                     }
 
                     if (resultArray.size == 0)
-                        throw InvalidArgumentException(arrayOf("Provided instructions not valid machine language"))
+                        throw AssemblyException("Provided instructions not valid machine language")
                 }
 
                 AssemblerTokenTypes.NUMBER -> {
                     val num = tokens[indx].num;
                     ++indx
                     if (getOpcodeWithAddressMode(opString, AddressMode.RELATIVE) > 0) {
-                        val target = num - (addressInMemory + 2);
+                        val target = num - (currentBank.curAddress + 2);
                         resultArray = createAssemblyInstruction(opString, AddressMode.RELATIVE, target)
                     } else if (indx >= tokens.size) {
                         if (num > 255)
@@ -426,14 +490,14 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
                                 resultArray = createAssemblyInstruction(opString, AddressMode.ZERO_PAGE_Y, num)
                         }
                         else
-                            throw InvalidArgumentException(arrayOf("Unexpected tokens after label"))
+                            throw AssemblyException("Unexpected tokens after label")
                     }
                 }
 
                 AssemblerTokenTypes.IMMEDIATE -> {
                     ++indx
                     if ((indx >= tokens.size) || (tokens[indx].type != AssemblerTokenTypes.NUMBER))
-                        throw InvalidArgumentException(arrayOf("Expecting a number and got ${tokens[indx].type}"))
+                        throw AssemblyException("Expecting a number and got ${tokens[indx].type}")
                     else
                         resultArray = createAssemblyInstruction(opString, AddressMode.IMMEDIATE, tokens[indx].num)
                     ++indx
@@ -442,17 +506,17 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
                 AssemblerTokenTypes.INDIRECT_START -> {
                     var addr = 0
                     ++indx
-                    if (indx >= tokens.size) throw InvalidArgumentException(arrayOf("Unexpected end of statement"))
+                    if (indx >= tokens.size) throw AssemblyException("Unexpected end of statement")
                     if (tokens[indx].type == AssemblerTokenTypes.LABEL_LINK) {
                         // process label link for indirect address modes
-                        addLabel(AssemblerLabel(tokens[indx-1].contents, AssemblerLabelTypes.ADDRESS, assemblyAddress+1, currentBank))
+                        addLabel(AssemblerLabel(tokens[indx-1].contents, AssemblerLabelTypes.ADDRESS, currentBank.curAddress+1, currentBank.number))
                     } else if (tokens[indx].type == AssemblerTokenTypes.NUMBER) {
                         addr = tokens[indx].num;
                     } else {
-                        throw InvalidArgumentException(arrayOf("Expected number or label but got ${tokens[indx].type}"))
+                        throw AssemblyException("Expected number or label but got ${tokens[indx].type}")
                     }
                     ++indx
-                    if (indx >= tokens.size) throw InvalidArgumentException(arrayOf("Unexpected end of statement"))
+                    if (indx >= tokens.size) throw AssemblyException("Unexpected end of statement")
                     if (tokens[indx].type == AssemblerTokenTypes.INDEX_X) {
                         resultArray = createAssemblyInstruction(opString, AddressMode.INDIRECT_X, addr);
                         // assume proper closing of statement
@@ -464,53 +528,48 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
                         } else if (tokens[indx].type == AssemblerTokenTypes.INDEX_Y) {
                             resultArray = createAssemblyInstruction(opString, AddressMode.INDIRECT_Y, addr);
                         } else {
-                            throw InvalidArgumentException(arrayOf("Unknown indirect address mode specified"))
+                            throw AssemblyException("Unknown indirect address mode specified")
                         }
                         ++indx
                     } else {
-                        throw InvalidArgumentException(arrayOf("Malformed indirect adress instruction"))
+                        throw AssemblyException("Malformed indirect adress instruction")
                     }
                 }
                 else -> {
-                    throw InvalidArgumentException(arrayOf("Unable to determine instruction address mode"))
+                    throw AssemblyException("Unable to determine instruction address mode")
                 }
             }
         }
 
         if (resultArray.size == 0)
-            throw InvalidArgumentException(arrayOf("Provided instructions not valid machine language"))
+            throw AssemblyException("Provided instructions not valid machine language")
 
         if (indx < tokens.size)
             println("WARNING $assemblyLine additional code after parsed assembly exists but ignored.")
         return resultArray
     }
 
-    fun assembleProgram(source:ArrayList<String>, numBanks:Int = 1, bankSize:Int = 4096):Int {
-        this.bankSize = bankSize;
+    fun assembleProgram(source:ArrayList<String>):Int {
+        // clear previous assembly (if any)
         banks.clear()
-        for (cntr in 0..(numBanks-1)) {
-            println("allocating bank $cntr")
-            banks.add( Array(bankSize, {_-> 0}))
-        }
-
-        currentBank = 0;
+        currentBank = AssemblyBank(0)
+        banks.add(currentBank)
         assemblyLine = 0;
-        assemblyAddress = 0;
+
         var errorCode = 0;
         for (line in source) {
             ++assemblyLine
-            verbose("$assemblyLine $line -> ${assemblyAddress.toString(16)}: ", false)
+            verbose("$assemblyLine $line -> ${currentBank.curAddress.toString(16)}: ", false)
             var tokens = tokenize(line)
             try {
                 var ml = parse(tokens)
                 if (ml.size > 0)
                     for (data in ml) {
-                        banks[currentBank][assemblyAddress++] = data
-                        addressInMemory++
+                        currentBank.writeNextByte(data)
                         verbose("$${data.toString(16)},", false)
                     }
                 verbose("")
-            } catch (iae:InvalidArgumentException) {
+            } catch (iae:AssemblyException) {
                 errorCode = 2;
             }
         }

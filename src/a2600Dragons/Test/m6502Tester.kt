@@ -187,7 +187,7 @@ class M6502Tests : MemoryManager {
                 231,232,233,234,234,236,237,238,237,238,239,238,239,240,240,241,
                 241,242,245,246,246,247,248,249,250,251,253,254,255,254,255,  1)
 
-        return compareAssembly(assembler.banks[0], expectedOutput, false)
+        return compareAssembly(assembler.currentBank.bankToIntArray(), expectedOutput, false)
 //        for (indx in 0 ..(expectedOutput.size-1))
 //            if (assembler.banks[0][indx] != expectedOutput[indx])
 //                println("Data mismatch at $${indx.toString(16)}. Expecing $${expectedOutput[indx].toString(16)} but got $${assembler.banks[0][indx].toString(16)}!")
@@ -199,7 +199,7 @@ class M6502Tests : MemoryManager {
         val expectedOutput = arrayOf(
                 162,  0,  32,  11, 0, 202,  208,  250,  76, 12, 0, 96, 0)
 
-        return compareAssembly(assembler.banks[0], expectedOutput, false)
+        return compareAssembly(assembler.currentBank.bankToIntArray(), expectedOutput, false)
     }
 
     fun testAssemblySnippet(testName:String, assembly:ArrayList<String>, anticipatedResults:ArrayList<Pair<String,Int>>, verbose:Boolean = false):Boolean {
@@ -216,7 +216,7 @@ class M6502Tests : MemoryManager {
 
         // run until break
         for (cntr in 0..4095)
-            cart.write(cntr, assembler.banks[0][cntr])
+            cart.write(cntr, assembler.currentBank.readBankAddress(cntr))
         m6502.runToBreak()
 
         // compare results
