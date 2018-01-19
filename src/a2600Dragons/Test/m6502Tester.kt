@@ -194,7 +194,7 @@ class M6502Tests : MemoryManager {
     }
 
     fun testLabelAssembly(verbose:Boolean = false): Boolean {
-        var assembler = Assembler(M6502(this), true)//verbose)
+        val assembler = Assembler(M6502(this), verbose)
         assembler.assembleProgram(arrayListOf ( "start: ldx #0", "loop: jsr test", "dex", " bne loop", "jmp end", "test:", "rts", "end: brk"))
         val expectedOutput = arrayOf(
                 162,  0,  32,  11, 0, 202,  208,  250,  76, 12, 0, 96, 0)
@@ -202,6 +202,47 @@ class M6502Tests : MemoryManager {
         return compareAssembly(assembler.currentBank.bankToIntArray(), expectedOutput, false)
     }
 
+    fun testDirectives(verbose:Boolean = false):Boolean {
+        val assembler = Assembler(M6502(this), verbose)
+
+        // .BANK tests
+        var errorCode = assembler.assembleProgram(arrayListOf (
+                ".BANK 0 $1000 1024", "jsr bank1", "jsr bank2", ".bank 1 $2000 1024",
+                "bank1:	LDA #1", "RTS",
+                ".BANK 2 $2000 1024", "bank2:", "LDA #2", "RTS"))
+        if (errorCode > 0) {println("ERROR unable to assemble bank test!"); return false}
+        if (assembler.banks[0].bankOrigin != 4096){println("ERROR bank 0 origin incorrect!"); return false}
+        if (assembler.banks[0].size != 1024){println("ERROR bank 0 size incorrect!"); return false}
+        if (assembler.banks[1].bankOrigin != 8192){
+            println("ERROR bank 1 origin incorrect! ${assembler.banks[1].bankOrigin}"); return false}
+        if (assembler.banks[1].size != 1024){println("ERROR bank 1 size incorrect!"); return false}
+        if (assembler.banks[2].bankOrigin != 8192){println("ERROR bank 2 origin incorrect!"); return false}
+        if (assembler.banks[2].size != 1024){println("ERROR bank 2 size incorrect!"); return false}
+        val bank_b0expected = arrayOf(32, 0, 32, 32, 0, 32)
+        if (compareAssembly(assembler.banks[0].bankToIntArray(),bank_b0expected) == false)
+            {println("ERROR bank 0 machine language incorrect!"); return false}
+        val bank_b1expected = arrayOf(169, 1)
+        if (compareAssembly(assembler.banks[1].bankToIntArray(),bank_b1expected) == false)
+        {println("ERROR bank 1 machine language incorrect!"); return false}
+        val bank_b2expected = arrayOf(169, 2)
+        if (compareAssembly(assembler.banks[2].bankToIntArray(),bank_b2expected) == false)
+            {println("ERROR bank 2 machine language incorrect!"); return false}
+        if (verbose) println("Bank directive tests passed!")
+
+        // .ORG tests
+        errorCode = assembler.assembleProgram(arrayListOf (
+                ".BANK 0 $1000", "jmp ten",
+                ".ORG 4106", "ten: LDA #10", "brk"))
+        if (errorCode > 0) {println("ERROR unable to assemble ORG test!"); return false}
+        if (assembler.banks[0].bankOrigin != 4096){println("ERROR org bank 0 origin incorrect!"); return false}
+        if (assembler.banks[0].size != 4096){println("ERROR org bank 0 size incorrect!"); return false}
+        val org_b0expected = arrayOf(76, 10, 16, 0,0,0,0,0,0,0, 169, 10, 0)
+        if (compareAssembly(assembler.banks[0].bankToIntArray(),org_b0expected) == false)
+            {println("ERROR bank 2 machine language incorrect!"); return false}
+        if (verbose) println("ORG directive tests passed!")
+
+        return true
+    }
     fun testAssemblySnippet(testName:String, assembly:ArrayList<String>, anticipatedResults:ArrayList<Pair<String,Int>>, verbose:Boolean = false):Boolean {
         val cart = Cartridge()
         val m6502 = M6502(cart)
@@ -232,8 +273,6 @@ class M6502Tests : MemoryManager {
     }
 }
 
-
-
 /**
  * Tester code.
  */
@@ -258,5 +297,6 @@ fun main(args: Array<String>) {
     println(if (m6502Tests.testNoLabelAssembly(verbose)) "Can assemble properly (without labels)" else "*** PROBLEMS WITH ASSEMBLING ***")
     println(if (m6502Tests.testLabelAssembly(verbose)) "Can assemble properly (with labels)" else "*** PROBLEMS WITH ASSEMBLING LABELS ***")
 
-//    loadTest("a.out")
+    println(if (m6502Tests.testDirectives(true/*verbose*/)) "Can work with directives" else "*** PROBLEMS WITH DIRECTIVES ***")
+
 }

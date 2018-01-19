@@ -205,27 +205,27 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
                         AssemblerLabelTypes.RELATIVE_ADDRESS -> {
                             val baseAddress = asmlink.addressOrValue + 1
                             val offset = (linkTarget.addressOrValue - baseAddress) and 255
-                            banks[asmlink.bank].writeBankByte(asmlink.addressOrValue, offset)
+                            banks[asmlink.bank].writeCPUByte(asmlink.addressOrValue, offset)
                         }
 
                         AssemblerLabelTypes.TARGET_VALUE -> {/*Ignore*/}
 
                         AssemblerLabelTypes.HIGH_BYTE -> {
                             val targetHigh:Int = (linkTarget.addressOrValue / 256) and 255
-                            banks[asmlink.bank].writeBankByte(asmlink.addressOrValue,  targetHigh)
+                            banks[asmlink.bank].writeCPUByte(asmlink.addressOrValue,  targetHigh)
                         }
 
                         AssemblerLabelTypes.LOW_BYTE ,
                         AssemblerLabelTypes.ZERO_PAGE_ADDRESS -> {
                             val targetLow = linkTarget.addressOrValue and 255
-                            banks[asmlink.bank].writeBankByte(asmlink.addressOrValue, targetLow)
+                            banks[asmlink.bank].writeCPUByte(asmlink.addressOrValue, targetLow)
                         }
 
                         AssemblerLabelTypes.ADDRESS -> {
                             val targetLow = linkTarget.addressOrValue and 255
-                            banks[asmlink.bank].writeBankByte(asmlink.addressOrValue, targetLow)
+                            banks[asmlink.bank].writeCPUByte(asmlink.addressOrValue, targetLow)
                             val targetHigh:Int = (linkTarget.addressOrValue / 256) and 255
-                            banks[asmlink.bank].writeBankByte(asmlink.addressOrValue+1, targetHigh)
+                            banks[asmlink.bank].writeCPUByte(asmlink.addressOrValue+1, targetHigh)
                         }
                     }
                     if (asmlink.typeOfLabel != AssemblerLabelTypes.TARGET_VALUE)
@@ -380,12 +380,11 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
     // *** Directives ***
     // ******************
 
-    fun processDirectives(tokens: ArrayList<AssemblerToken>) {
+    private fun processDirectives(tokens: ArrayList<AssemblerToken>) {
         var indx = 0
         while (indx < tokens.size) {
             val token:AssemblerToken = tokens[indx]
             if (token.type == AssemblerTokenTypes.LABEL_LINK) {
-
                 // see if label is a variable and if so replace with value
                 if (variableList.containsKey(token.contents)) {
                     println("TODO - replace label with variable's number token for ${token.contents}")
@@ -393,12 +392,52 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
                     ++indx
             } else if (token.type == AssemblerTokenTypes.DIRECTIVE) {
                 // find token with directive
-                var directive = "ORG"
+                val directive = token.contents.toUpperCase()
+                tokens.removeAt(indx)
                 // based of directive,
                 when (directive) {
-
                 // .BANK id [base_address] [size] switches bank, optional bank orgin and size
-
+                    "BANK" -> {
+                        if ((indx >= tokens.size) or (tokens[indx].type != AssemblerTokenTypes.NUMBER)) {
+                            throw AssemblyException("Invalid bank specified $assemblyLine")
+                        }
+                        // get parameters for bank directive
+                        val bankID = tokens[indx].num
+                        tokens.removeAt(indx)
+                        var bankOrg = 0
+                        var orginParamSet = false
+                        var bankSize = 4096
+                        var sizeParamSet = false
+                        if (indx < tokens.size)
+                            if (tokens[indx].type == AssemblerTokenTypes.NUMBER) {
+                                bankOrg = tokens[indx].num
+                                orginParamSet = true
+                                tokens.removeAt(indx)
+                                if (indx < tokens.size)
+                                    if (tokens[indx].type == AssemblerTokenTypes.NUMBER) {
+                                        bankSize = tokens[indx].num
+                                        sizeParamSet = true
+                                        tokens.removeAt(indx)
+                                    }
+                            }
+                        // apply bank directive
+                        if (banks.size > bankID) {
+                            currentBank = banks[bankID]
+                            if ((orginParamSet) and (currentBank.bankOrigin != bankOrg)) {
+                                currentBank.bankOrigin = bankOrg
+                                currentBank.curAddress = bankOrg
+                            }
+                            if ((sizeParamSet) and (currentBank.size != bankSize))
+                                currentBank.resize(bankSize)
+                        } else {
+                            while(banks.size < bankID) {
+                                val skippedBank = banks.size
+                                banks.add(AssemblyBank(skippedBank))
+                            }
+                            banks.add(AssemblyBank(bankID, bankSize, bankOrg))
+                            currentBank = banks[bankID]
+                        }
+                    }
 
                 // .BYTE one or more bytes separated by whitespace
 
@@ -409,11 +448,28 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
 
                 // .ORG changes address where code is to be generated within current bank
                     "ORG" -> {
-                        TODO()
+                        if (indx >= tokens.size) {
+                            throw AssemblyException("Missing parameters for .ORG statement line $assemblyLine")
+                        }
+                        if (tokens[indx].type != AssemblerTokenTypes.NUMBER) {
+                            throw AssemblyException("Invalid origin parameter at line $assemblyLine")
+                        }
+                        // get parameters for .ORG directive
+                        val address = tokens[indx].num
+                        tokens.removeAt(indx)
+                        if ((address < currentBank.bankOrigin) or
+                                (address >= currentBank.bankOrigin + currentBank.size))
+                            throw AssemblyException("Invalid address for current bank specified at line $assemblyLine")
+                        currentBank.curAddress = address;
                     }
+
                 // .VAR take advantage of a variable that was declared earlier
                 // .VARHIGH high byte of a variable
                 // .VARLOW low byte of a variable
+                    else -> {
+                        println("WARNING: Unknown directive used ${assemblyLine} $directive")
+                        tokens.removeAt(indx)
+                    }
                 }
             } else
                 ++indx
@@ -631,6 +687,7 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
                 verbose("")
             } catch (iae:AssemblyException) {
                 errorCode = 2
+                verbose("${iae.message}", true)
             }
         }
         val errors = linkLabelsInMemory()
