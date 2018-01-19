@@ -2,6 +2,8 @@ package a2600Dragons.m6502
 
 class AssemblyException(s:String) : Throwable(s)
 
+// =================================================================================================================
+
 /** Types of token types used by the assembler */
 enum class AssemblerTokenTypes {
     DIRECTIVE,                          // Assembly commands start with a dot
@@ -15,6 +17,8 @@ enum class AssemblerTokenTypes {
     WHITESPACE                          // spaces, tabs, and comments
 }
 
+// =================================================================================================================
+
 /** Information about token on line:
  *      Type is the token type,
  *      contents is actual content that resulted in this token,
@@ -22,6 +26,7 @@ enum class AssemblerTokenTypes {
  */
 data class AssemblerToken(val type:AssemblerTokenTypes, val contents:String, val num:Int)
 
+// =================================================================================================================
 
 /** Differnt types of labels used in the assembler */
 enum class AssemblerLabelTypes {
@@ -34,6 +39,8 @@ enum class AssemblerLabelTypes {
 
 }
 
+// =================================================================================================================
+
 /** Information about labels:
  *      label is the name of the label
  *      targetAddress is where (bank and address) is where label leads to
@@ -45,14 +52,16 @@ data class AssemblerLabel(val labelName:String,
                           val addressOrValue: Int,
                           val bank:Int = 0)
 
+// =================================================================================================================
+
 /** Bank for storing resulting machine language data */
 class AssemblyBank(val number:Int, var size:Int = 4096, var bankOrigin:Int = 0) {
     //
-    var storage:ByteArray = ByteArray(size)
+    private var storage:ByteArray = ByteArray(size)
     var curAddress:Int = bankOrigin
 
-    fun curCPUAddress():Int {
-        return curAddress + bankOrigin;
+    fun curBankAddress():Int {
+        return curAddress - bankOrigin
     }
 
     fun readBankAddress(offset:Int):Int {
@@ -67,11 +76,12 @@ class AssemblyBank(val number:Int, var size:Int = 4096, var bankOrigin:Int = 0) 
      * @throws AssemblyException if try to write past end of bank
      */
     fun writeNextByte(data:Int):Int {
-        if (curAddress >= size)
-            throw AssemblyException("Past end of assembly bank")
-        storage.set(curAddress, data.toByte())
+        val offset = curBankAddress()
+        if ((offset < 0) or (offset >= size))
+            throw AssemblyException("Writing outside of assembly bank")
+        storage[offset] = data.toByte()
         ++curAddress
-        return curAddress + bankOrigin
+        return curAddress
     }
 
     /** Writes byte at indicated bank address (0 being start of bank)
@@ -90,24 +100,25 @@ class AssemblyBank(val number:Int, var size:Int = 4096, var bankOrigin:Int = 0) 
         writeBankByte(address - bankOrigin, data)
     }
 
-    fun resized(bankSize:Int) {
+    @Suppress("unused")
+    fun resize(bankSize:Int) {
         if (size == bankSize)
-            return;
+            return
         val oldSize = size
         val oldStorage = storage
         storage = ByteArray(bankSize)
         size = bankSize
-        val bytesToCopy = Math.min(oldSize, size);
+        val bytesToCopy = Math.min(oldSize, size)
         for (offset in 0..(bytesToCopy-1))
             storage[offset] = oldStorage[offset]
     }
 
     fun bankToIntArray():Array<Int> {
-        val list = Array<Int> (size, {cntr -> storage[cntr].toInt() and 255})
-        return list;
+        return Array<Int> (size, {cntr -> storage[cntr].toInt() and 255})
     }
 }
 
+// =================================================================================================================
 
 /**
  * Assembles code into assembly language. I am using a 1.5 pass approach where labels are tracked durring the first
@@ -121,6 +132,7 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
 //    var assemblyAddress = 0
     var currentBank = AssemblyBank(0)
 
+    var variableList = HashMap<String, AssemblerToken>()
     var labelList = HashMap<String, ArrayList<AssemblerLabel>>()
     var banks = ArrayList<AssemblyBank>()
 
@@ -133,7 +145,7 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
             if (mapOfOpCodes.containsKey(inst.OPString))
                 mapOfOpCodes[inst.OPString]!!.add(inst)
             else {
-                mapOfOpCodes.put(inst.OPString, arrayListOf<M6502Instruction>(inst))
+                mapOfOpCodes.put(inst.OPString, arrayListOf(inst))
             }
         }
         banks.add(currentBank)
@@ -148,6 +160,7 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
         }
     }
 
+
     // ************************
     // *** label management ***
     // ************************
@@ -156,7 +169,7 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
 //        verbose("adding label ${label.labelName} at ${label.addressOrValue}")
         // see if already a label with this name
         if ( !labelList.containsKey(label.labelName)) {
-            val resultList = ArrayList<AssemblerLabel>();
+            val resultList = ArrayList<AssemblerLabel>()
             resultList.add(label)
             labelList.put(label.labelName, resultList)
         } else {
@@ -167,7 +180,7 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
 
 
     fun linkLabelsInMemory():ArrayList<String> {
-        val errorList = ArrayList<String>();
+        val errorList = ArrayList<String>()
         for ( (label, links) in labelList) {
             verbose("Processing links for label $label:")
             // find target as if no target there is a problem
@@ -177,7 +190,7 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
                     // warn about duplicate targets but default to last found
                     if (linkTarget != null)
                         errorList.add("Warning: ${asmlink.labelName} declared multiple times!")
-                    linkTarget = asmlink;
+                    linkTarget = asmlink
                     verbose(" link target is ${linkTarget.addressOrValue}")
                 }
             }
@@ -223,7 +236,7 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
 
         }
 
-        return errorList;
+        return errorList
     }
 
     // ***********************
@@ -234,9 +247,8 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
     fun tokenize(line:String, ignoreWhitespace:Boolean=true):ArrayList<AssemblerToken> {
         val resultList = ArrayList<AssemblerToken>()
         var indx = 0
-        var currentTokenData:String = ""
-        var currentTokenType:AssemblerTokenTypes = AssemblerTokenTypes.WHITESPACE;
-        var currentTokenNum:Int = 0
+        var currentTokenData = ""
+        var currentTokenNum = 0
         val lineLen = line.length
         while (indx < lineLen) {
             val tokenSymbol = line[indx]
@@ -257,7 +269,7 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
                 ';' -> {
                     if (!ignoreWhitespace)
                         resultList.add(AssemblerToken(AssemblerTokenTypes.WHITESPACE, line.substring(indx), lineLen - indx))
-                    indx = lineLen;
+                    indx = lineLen
                 }
 
                 // immediate mode indicator
@@ -364,18 +376,64 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
         return resultList
     }
 
+    // ******************
+    // *** Directives ***
+    // ******************
 
+    fun processDirectives(tokens: ArrayList<AssemblerToken>) {
+        var indx = 0
+        while (indx < tokens.size) {
+            val token:AssemblerToken = tokens[indx]
+            if (token.type == AssemblerTokenTypes.LABEL_LINK) {
+
+                // see if label is a variable and if so replace with value
+                if (variableList.containsKey(token.contents)) {
+                    println("TODO - replace label with variable's number token for ${token.contents}")
+                } else
+                    ++indx
+            } else if (token.type == AssemblerTokenTypes.DIRECTIVE) {
+                // find token with directive
+                var directive = "ORG"
+                // based of directive,
+                when (directive) {
+
+                // .BANK id [base_address] [size] switches bank, optional bank orgin and size
+
+
+                // .BYTE one or more bytes separated by whitespace
+
+                // .EQU set up or change variable - should be done before they are used in code
+                // .HIGH
+                // .JUMPTABLE
+                // .LOW
+
+                // .ORG changes address where code is to be generated within current bank
+                    "ORG" -> {
+                        TODO()
+                    }
+                // .VAR take advantage of a variable that was declared earlier
+                // .VARHIGH high byte of a variable
+                // .VARLOW low byte of a variable
+                }
+            } else
+                ++indx
+        }
+    }
+
+    // ***************************************
+    // *** PARSING And Assembly generation ***
+    // ***************************************
     /**
      * returns op code with that address mode, returning -1 for invalid requests
      */
     fun getOpcodeWithAddressMode(opString:String, mode:AddressMode) : Int {
         if (!mapOfOpCodes.containsKey(opString))
-            return -1;
-        val instList = mapOfOpCodes[opString];
-        var opCode = -1;
+            return -1
+        val instList = mapOfOpCodes[opString]
+        var opCode = -1
         for (inst in instList!!)
             if (inst.addressMode == mode)
-                opCode = inst.OPCode;
+                opCode = inst.OPCode
         return opCode
     }
 
@@ -383,7 +441,7 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
      *
      */
     fun createAssemblyInstruction(opString:String, mode:AddressMode, target:Int):Array<Int> {
-        val opCode = getOpcodeWithAddressMode(opString, mode);
+        val opCode = getOpcodeWithAddressMode(opString, mode)
         if (opCode == -1)
             return arrayOf()
         val instructionSize = m6502.commands[opCode].size
@@ -403,9 +461,10 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
         var resultArray:Array<Int> = arrayOf()
         if (tokens.size == 0) return resultArray
 
-        var indx = 0;
+        var indx = 0
 
-        // see if line starts with a label
+        // see if line starts with a label - note label declarations take precedence so .byte,.word,.string, etc will
+        // be mapped to the proper address.
         if (tokens[indx].type == AssemblerTokenTypes.LABEL_DECLARATION) {
             // add label system
             addLabel(AssemblerLabel(tokens[indx].contents, AssemblerLabelTypes.TARGET_VALUE, currentBank.curAddress, currentBank.number))
@@ -414,11 +473,10 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
                 return resultArray
         }
 
-        // see if line is a dirrective
-        if (tokens[indx].type == AssemblerTokenTypes.DIRECTIVE) {
-            println("TODO Directives not implemented yet")
+        // process the directives in this line. This will result in the token list being changed if directives exist
+        processDirectives(tokens)
+        if (indx >= tokens.size)
             return resultArray
-        }
 
         // if reach here and not an opcode not a valid line
         if (tokens[indx].type != AssemblerTokenTypes.OPCODE)
@@ -433,8 +491,8 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
             when (tokens[indx].type) {
                 AssemblerTokenTypes.LABEL_LINK -> {
                     // special case label a or A for accumulator mode
-                    val labelString = tokens[indx].contents;
-                    ++indx;
+                    val labelString = tokens[indx].contents
+                    ++indx
                     if ((labelString == "A") || (labelString == "a")) {
                         resultArray = createAssemblyInstruction(opString, AddressMode.ACCUMULATOR, 0)
                     } else if (getOpcodeWithAddressMode(opString, AddressMode.RELATIVE) > 0) {
@@ -446,7 +504,7 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
                         addLabel(AssemblerLabel(labelString, AssemblerLabelTypes.ADDRESS, currentBank.curAddress+1, currentBank.number))
                         resultArray = createAssemblyInstruction(opString, AddressMode.ABSOLUTE, 0)
                     } else {
-                        val indexToken = tokens[indx];
+                        val indexToken = tokens[indx]
                         ++indx
                         if (indexToken.type == AssemblerTokenTypes.INDEX_X) {
                             // add address label link
@@ -460,15 +518,15 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
                             throw AssemblyException("Unexpected tokens after label")
                     }
 
-                    if (resultArray.size == 0)
+                    if (resultArray.isEmpty())
                         throw AssemblyException("Provided instructions not valid machine language")
                 }
 
                 AssemblerTokenTypes.NUMBER -> {
-                    val num = tokens[indx].num;
+                    val num = tokens[indx].num
                     ++indx
                     if (getOpcodeWithAddressMode(opString, AddressMode.RELATIVE) > 0) {
-                        val target = num - (currentBank.curAddress + 2);
+                        val target = num - (currentBank.curAddress + 2)
                         resultArray = createAssemblyInstruction(opString, AddressMode.RELATIVE, target)
                     } else if (indx >= tokens.size) {
                         if (num > 255)
@@ -476,7 +534,7 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
                         else
                             resultArray = createAssemblyInstruction(opString, AddressMode.ZERO_PAGE, num)
                     } else {
-                        val indexToken = tokens[indx];
+                        val indexToken = tokens[indx]
                         ++indx
                         if (indexToken.type == AssemblerTokenTypes.INDEX_X) {
                             if (num > 255)
@@ -511,22 +569,22 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
                         // process label link for indirect address modes
                         addLabel(AssemblerLabel(tokens[indx-1].contents, AssemblerLabelTypes.ADDRESS, currentBank.curAddress+1, currentBank.number))
                     } else if (tokens[indx].type == AssemblerTokenTypes.NUMBER) {
-                        addr = tokens[indx].num;
+                        addr = tokens[indx].num
                     } else {
                         throw AssemblyException("Expected number or label but got ${tokens[indx].type}")
                     }
                     ++indx
                     if (indx >= tokens.size) throw AssemblyException("Unexpected end of statement")
                     if (tokens[indx].type == AssemblerTokenTypes.INDEX_X) {
-                        resultArray = createAssemblyInstruction(opString, AddressMode.INDIRECT_X, addr);
+                        resultArray = createAssemblyInstruction(opString, AddressMode.INDIRECT_X, addr)
                         // assume proper closing of statement
                         indx += 2
                     } else if (tokens[indx].type == AssemblerTokenTypes.INDIRECT_END) {
                         ++indx
                         if (indx >= tokens.size) {
-                            resultArray = createAssemblyInstruction(opString, AddressMode.INDIRECT, addr);
+                            resultArray = createAssemblyInstruction(opString, AddressMode.INDIRECT, addr)
                         } else if (tokens[indx].type == AssemblerTokenTypes.INDEX_Y) {
-                            resultArray = createAssemblyInstruction(opString, AddressMode.INDIRECT_Y, addr);
+                            resultArray = createAssemblyInstruction(opString, AddressMode.INDIRECT_Y, addr)
                         } else {
                             throw AssemblyException("Unknown indirect address mode specified")
                         }
@@ -541,7 +599,7 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
             }
         }
 
-        if (resultArray.size == 0)
+        if (resultArray.isEmpty())
             throw AssemblyException("Provided instructions not valid machine language")
 
         if (indx < tokens.size)
@@ -554,28 +612,30 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
         banks.clear()
         currentBank = AssemblyBank(0)
         banks.add(currentBank)
-        assemblyLine = 0;
+        assemblyLine = 0
+        variableList.clear()
+        labelList.clear()
 
-        var errorCode = 0;
+        var errorCode = 0
         for (line in source) {
             ++assemblyLine
             verbose("$assemblyLine $line -> ${currentBank.curAddress.toString(16)}: ", false)
-            var tokens = tokenize(line)
+            val tokens = tokenize(line)
             try {
-                var ml = parse(tokens)
-                if (ml.size > 0)
+                val ml = parse(tokens)
+                if (ml.isNotEmpty())
                     for (data in ml) {
                         currentBank.writeNextByte(data)
                         verbose("$${data.toString(16)},", false)
                     }
                 verbose("")
             } catch (iae:AssemblyException) {
-                errorCode = 2;
+                errorCode = 2
             }
         }
-        var errors = linkLabelsInMemory()
+        val errors = linkLabelsInMemory()
         if (errors.size > 0) {
-            errorCode = 1;
+            errorCode = 1
             for (errmessage in errors)
                 println(errmessage)
         }
