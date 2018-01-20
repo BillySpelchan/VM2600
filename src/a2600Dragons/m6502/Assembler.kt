@@ -438,7 +438,32 @@ class Assembler(private val m6502: M6502, private var isVerbose:Boolean = false)
                         }
                     }
 
-                // .BYTE one or more bytes separated by whitespace
+                // .BYTE one or more bytes separated by whitespace. only low byte of labels are used if in line.
+                    "BYTE" -> {
+                        var validEntry = true
+                        while ((indx < tokens.size) and (validEntry)) {
+                            // replace labels with varible token if they are variables
+                            if (tokens[indx].type == AssemblerTokenTypes.LABEL_LINK) {
+                                val varToken = variableList.get(tokens[indx].contents)
+                                if (varToken != null)
+                                    tokens[indx] = varToken
+                            }
+                            // determine token value (use low byte if label used)
+                            val byteToAdd = if (tokens[indx].type == AssemblerTokenTypes.NUMBER) tokens[indx].num
+                            else if (tokens[indx].type == AssemblerTokenTypes.LABEL_LINK) {
+                                    addLabel(AssemblerLabel(tokens[indx].contents, AssemblerLabelTypes.LOW_BYTE, currentBank.curAddress, currentBank.number))
+                                    0
+                            } else {
+                                validEntry = false
+                                0
+                            }
+                            // if valid then write the value to memory and remove token
+                            if (validEntry) {
+                                currentBank.writeNextByte(byteToAdd)
+                                tokens.removeAt(indx)
+                            }
+                        }
+                    }
 
                 // .EQU set up or change variable - should be done before they are used in code
                     "EQU" -> {
@@ -475,7 +500,6 @@ class Assembler(private val m6502: M6502, private var isVerbose:Boolean = false)
                         tokens[indx] = AssemblerToken(AssemblerTokenTypes.NUMBER, "high", (num / 256) and 255)
                     }
 
-                // .JUMPTABLE
                 // .LOW takes the low order byte of a number or label address resulting in single byte value
                     "LOW" -> {
                         if (indx >= tokens.size) {
@@ -514,9 +538,34 @@ class Assembler(private val m6502: M6502, private var isVerbose:Boolean = false)
                         currentBank.curAddress = address
                     }
 
-                // .VAR take advantage of a variable that was declared earlier
-                // .VARHIGH high byte of a variable
-                // .VARLOW low byte of a variable
+                // .WORD is like byte except results stored in two bytes as low then high
+                    "WORD" -> {
+                        var validEntry = true
+                        while ((indx < tokens.size) and (validEntry)) {
+                            // replace labels with varible token if they are variables
+                            if (tokens[indx].type == AssemblerTokenTypes.LABEL_LINK) {
+                                val varToken = variableList.get(tokens[indx].contents)
+                                if (varToken != null)
+                                    tokens[indx] = varToken
+                            }
+                            // determine token value (use low byte if label used)
+                            val wordToAdd = if (tokens[indx].type == AssemblerTokenTypes.NUMBER) tokens[indx].num
+                            else if (tokens[indx].type == AssemblerTokenTypes.LABEL_LINK) {
+                                addLabel(AssemblerLabel(tokens[indx].contents, AssemblerLabelTypes.ADDRESS, currentBank.curAddress, currentBank.number))
+                                0
+                            } else {
+                                validEntry = false
+                                0
+                            }
+                            // if valid then write the value to memory (low then high bytes) and remove token
+                            if (validEntry) {
+                                currentBank.writeNextByte(wordToAdd and 255)
+                                currentBank.writeNextByte((wordToAdd / 256) and 255)
+                                tokens.removeAt(indx)
+                            }
+                        }
+                    }
+
                     else -> {
                         println("WARNING: Unknown directive used $assemblyLine $directive")
                         tokens.removeAt(indx)

@@ -262,6 +262,22 @@ class M6502Tests : MemoryManager {
         {println("ERROR .HIGH .LOW machine language incorrect!"); return false}
         if (verbose) println("HIGH LOW directive tests passed!")
 
+        // Storage (.BYTE .WORD) tests
+        errorCode = assembler.assembleProgram(arrayListOf (
+                ".BANK 0 $1000 1024",
+                ".EQU two 2",
+                ".EQU fivesix $0605",
+                "LDA bytes",
+                "LDA words",
+                "bytes: .BYTE 1 two 3 4",
+                "words: .WORD fivesix $0807 $0A09 bytes",
+                "BRK" ))
+        if (errorCode > 0) {println("ERROR unable to assemble Storage test!"); return false}
+        val storage_expected = arrayOf(173,0x06,0x10, 173,0x0A,0x10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 6, 16, 0)
+        if ( ! compareAssembly(assembler.banks[0].bankToIntArray(),storage_expected))
+        {println("ERROR Storage (.BYTE .WORD)machine language incorrect!"); return false}
+        if (verbose) println("Storage directive tests passed!")
+
         return true
     }
 
