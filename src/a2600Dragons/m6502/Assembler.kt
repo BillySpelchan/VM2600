@@ -28,7 +28,7 @@ data class AssemblerToken(val type:AssemblerTokenTypes, val contents:String, val
 
 // =================================================================================================================
 
-/** Differnt types of labels used in the assembler */
+/** Different types of labels used in the assembler */
 enum class AssemblerLabelTypes {
     TARGET_VALUE,                       // Holds the address or value that the label represents
     HIGH_BYTE,                          // treat label as variable and use high byte of it
@@ -68,10 +68,10 @@ class AssemblyBank(val number:Int, var size:Int = 4096, var bankOrigin:Int = 0) 
         if ((offset < 0) or (offset >= size))
             throw OutOfMemoryError("Requested address not in assembly bank")
         return (storage[offset].toInt() and 255)
-
     }
 
-    /** writes byte to next assembly address incremeting address.
+
+    /** writes byte to next assembly address incrementing address.
      * @return the next CPU Address
      * @throws AssemblyException if try to write past end of bank
      */
@@ -121,19 +121,17 @@ class AssemblyBank(val number:Int, var size:Int = 4096, var bankOrigin:Int = 0) 
 // =================================================================================================================
 
 /**
- * Assembles code into assembly language. I am using a 1.5 pass approach where labels are tracked durring the first
+ * Assembles code into assembly language. I am using a 1.5 pass approach where labels are tracked during the first
  * pass with the addresses set to proper values during a linking phase where the list of labels are parsed and code
  * that uses the label are updated to reflect the proper label.
  */
-class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
-    var mapOfOpCodes = HashMap<String, ArrayList<M6502Instruction>>()
-    var assemblyLine = 0
-//    var addressInMemory = 0
-//    var assemblyAddress = 0
+class Assembler(private val m6502: M6502, private var isVerbose:Boolean = false) {
+    private var mapOfOpCodes = HashMap<String, ArrayList<M6502Instruction>>()
+    private var assemblyLine = 0
     var currentBank = AssemblyBank(0)
 
-    var variableList = HashMap<String, AssemblerToken>()
-    var labelList = HashMap<String, ArrayList<AssemblerLabel>>()
+    private var variableList = HashMap<String, AssemblerToken>()
+    private var labelList = HashMap<String, ArrayList<AssemblerLabel>>()
     var banks = ArrayList<AssemblyBank>()
 
     /** build a hash-map of the mnemonics with all of the op codes so a particular mnemonic can seek out addressing
@@ -152,7 +150,7 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
     }
 
     /** Verbose mode prints out extra details while assembling the program */
-    fun verbose(s:String, newline:Boolean = true) {
+    private fun verbose(s:String, newline:Boolean = true) {
         if (isVerbose) {
             print(s)
             if (newline)
@@ -165,6 +163,7 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
     // *** label management ***
     // ************************
 
+    @Suppress("MemberVisibilityCanPrivate")
     fun addLabel(label:AssemblerLabel) {
 //        verbose("adding label ${label.labelName} at ${label.addressOrValue}")
         // see if already a label with this name
@@ -179,7 +178,7 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
     }
 
 
-    fun linkLabelsInMemory():ArrayList<String> {
+    private fun linkLabelsInMemory():ArrayList<String> {
         val errorList = ArrayList<String>()
         for ( (label, links) in labelList) {
             verbose("Processing links for label $label:")
@@ -247,8 +246,8 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
     fun tokenize(line:String, ignoreWhitespace:Boolean=true):ArrayList<AssemblerToken> {
         val resultList = ArrayList<AssemblerToken>()
         var indx = 0
-        var currentTokenData = ""
-        var currentTokenNum = 0
+        var currentTokenData: String
+        var currentTokenNum: Int
         val lineLen = line.length
         while (indx < lineLen) {
             val tokenSymbol = line[indx]
@@ -387,9 +386,9 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
             if (token.type == AssemblerTokenTypes.LABEL_LINK) {
                 // see if label is a variable and if so replace with value
                 if (variableList.containsKey(token.contents)) {
-                    println("TODO - replace label with variable's number token for ${token.contents}")
-                } else
-                    ++indx
+                    tokens[indx] = variableList.get(token.contents)!!
+                }
+                ++indx
             } else if (token.type == AssemblerTokenTypes.DIRECTIVE) {
                 // find token with directive
                 val directive = token.contents.toUpperCase()
@@ -442,6 +441,19 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
                 // .BYTE one or more bytes separated by whitespace
 
                 // .EQU set up or change variable - should be done before they are used in code
+                    "EQU" -> {
+                        if (indx >= (tokens.size + 1)) {
+                            throw AssemblyException("Missing parameters for .EQU statement line $assemblyLine")
+                        }
+                        if (tokens[indx].type != AssemblerTokenTypes.LABEL_LINK) {
+                            throw AssemblyException("Missing EQU variable name on line $assemblyLine")
+                        }
+                        val varName = tokens[indx].contents
+                        tokens.removeAt(indx)
+                        variableList.put(varName, tokens[indx])
+                        tokens.removeAt(indx)
+                    }
+
                 // .HIGH
                 // .JUMPTABLE
                 // .LOW
@@ -460,14 +472,14 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
                         if ((address < currentBank.bankOrigin) or
                                 (address >= currentBank.bankOrigin + currentBank.size))
                             throw AssemblyException("Invalid address for current bank specified at line $assemblyLine")
-                        currentBank.curAddress = address;
+                        currentBank.curAddress = address
                     }
 
                 // .VAR take advantage of a variable that was declared earlier
                 // .VARHIGH high byte of a variable
                 // .VARLOW low byte of a variable
                     else -> {
-                        println("WARNING: Unknown directive used ${assemblyLine} $directive")
+                        println("WARNING: Unknown directive used $assemblyLine $directive")
                         tokens.removeAt(indx)
                     }
                 }
@@ -482,7 +494,7 @@ class Assembler(val m6502: M6502, var isVerbose:Boolean = false) {
     /**
      * returns op code with that address mode, returning -1 for invalid requests
      */
-    fun getOpcodeWithAddressMode(opString:String, mode:AddressMode) : Int {
+    private fun getOpcodeWithAddressMode(opString:String, mode:AddressMode) : Int {
         if (!mapOfOpCodes.containsKey(opString))
             return -1
         val instList = mapOfOpCodes[opString]

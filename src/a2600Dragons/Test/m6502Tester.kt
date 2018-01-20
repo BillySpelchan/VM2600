@@ -2,10 +2,6 @@ package a2600Dragons.Test
 
 import a2600Dragons.a2600.Cartridge
 import a2600Dragons.m6502.*
-import com.sun.org.apache.xpath.internal.operations.Bool
-
-import java.io.File
-
 
 data class TokenTestResults(val line:String, val ignoreWhite:Boolean, val tokens:ArrayList<AssemblerToken>)
 
@@ -19,7 +15,7 @@ class M6502Tests : MemoryManager {
 
     // simply set the test values to the low byte of the address
     override fun read(address: Int): Int {
-        return address and 255;
+        return address and 255
     }
 
     // not needed for testing
@@ -64,14 +60,14 @@ class M6502Tests : MemoryManager {
 
     // perform a test on the indicated instruction (always at that address) and see that it matches what we expect
     fun testM6502(m6502:M6502, address:Int) : Boolean {
-        var disassembly:String = m6502.disassembleStep(address)
+        val disassembly:String = m6502.disassembleStep(address)
 
         return disassembly == expectedResults[address]
     }
 
 
     // Main batch of token data for testing tokenization portion of the assembler
-    val tokenTestData = arrayOf(
+    private val tokenTestData = arrayOf(
             TokenTestResults("   ", false,
                     arrayListOf(AssemblerToken(AssemblerTokenTypes.WHITESPACE, " ", 3))),
             TokenTestResults(".BANK \$B", false,
@@ -104,9 +100,9 @@ class M6502Tests : MemoryManager {
     /** Simple test to make sure the tokens are proper */
     fun testTokenizer():Boolean {
         var success = true
-        var assembler = Assembler(M6502(this))
+        val assembler = Assembler(M6502(this))
         for (test in tokenTestData) {
-            var tokens = assembler.tokenize(test.line, test.ignoreWhite)
+            val tokens = assembler.tokenize(test.line, test.ignoreWhite)
             if (tokens != test.tokens) {
                 println(test.line)
                 println("FAILED $tokens")
@@ -119,12 +115,12 @@ class M6502Tests : MemoryManager {
         return success
     }
 
-    fun compareAssembly(testML:Array<Int>, expectedML:Array<Int>, stopAfterError:Boolean = true):Boolean
+    private fun compareAssembly(testML:Array<Int>, expectedML:Array<Int>, stopAfterError:Boolean = true):Boolean
     {
-        var success = true;
+        var success = true
         if (testML.size < expectedML.size)
             success = false
-        else if (expectedML.size == 0)
+        else if (expectedML.isEmpty())
             success = true
         else {
             for (cntr in 0..(expectedML.size-1))
@@ -141,7 +137,7 @@ class M6502Tests : MemoryManager {
 
 
     fun testNoLabelAssembly(verbose:Boolean = false): Boolean {
-        var assembler = Assembler(M6502(this), verbose)
+        val assembler = Assembler(M6502(this), verbose)
         assembler.assembleProgram(arrayListOf ( "ORA ($2, X)", "ORA $6", "ASL $7", "PHP ", "ORA #\$A", "ASL A",
                 "ORA \$F0E", "ASL $100F", "BPL $23", "ORA ($12), Y", "ORA $16, X", "ASL $17, X", "CLC ", "ORA $1B1A, Y",
                 "ORA $1F1E, X", "ASL $201F, X", "JSR $2221", "AND ($22, X)", "BIT $25", "AND $26", "ROL $27",
@@ -219,13 +215,13 @@ class M6502Tests : MemoryManager {
         if (assembler.banks[2].bankOrigin != 8192){println("ERROR bank 2 origin incorrect!"); return false}
         if (assembler.banks[2].size != 1024){println("ERROR bank 2 size incorrect!"); return false}
         val bank_b0expected = arrayOf(32, 0, 32, 32, 0, 32)
-        if (compareAssembly(assembler.banks[0].bankToIntArray(),bank_b0expected) == false)
+        if ( ! compareAssembly(assembler.banks[0].bankToIntArray(),bank_b0expected))
             {println("ERROR bank 0 machine language incorrect!"); return false}
         val bank_b1expected = arrayOf(169, 1)
-        if (compareAssembly(assembler.banks[1].bankToIntArray(),bank_b1expected) == false)
+        if ( ! compareAssembly(assembler.banks[1].bankToIntArray(),bank_b1expected))
         {println("ERROR bank 1 machine language incorrect!"); return false}
         val bank_b2expected = arrayOf(169, 2)
-        if (compareAssembly(assembler.banks[2].bankToIntArray(),bank_b2expected) == false)
+        if ( ! compareAssembly(assembler.banks[2].bankToIntArray(),bank_b2expected))
             {println("ERROR bank 2 machine language incorrect!"); return false}
         if (verbose) println("Bank directive tests passed!")
 
@@ -237,18 +233,31 @@ class M6502Tests : MemoryManager {
         if (assembler.banks[0].bankOrigin != 4096){println("ERROR org bank 0 origin incorrect!"); return false}
         if (assembler.banks[0].size != 4096){println("ERROR org bank 0 size incorrect!"); return false}
         val org_b0expected = arrayOf(76, 10, 16, 0,0,0,0,0,0,0, 169, 10, 0)
-        if (compareAssembly(assembler.banks[0].bankToIntArray(),org_b0expected) == false)
+        if ( ! compareAssembly(assembler.banks[0].bankToIntArray(),org_b0expected))
             {println("ERROR bank 2 machine language incorrect!"); return false}
         if (verbose) println("ORG directive tests passed!")
 
+        // .EQU tests
+        errorCode = assembler.assembleProgram(arrayListOf (
+            ".EQU ONE 1", ".EQU TWO $2", ".EQU THREE %11",
+            "LDA #ONE", "LDA #TWO", "STA THREE", "BRK" ))
+        if (errorCode > 0) {println("ERROR unable to assemble EQU test!"); return false}
+        val equ_expected = arrayOf(169,1, 169,2, 133,3,0)
+        if ( ! compareAssembly(assembler.banks[0].bankToIntArray(),equ_expected))
+            {println("ERROR .EQU machine language incorrect!"); return false}
+        if (verbose) println("EQU directive tests passed!")
+
         return true
     }
+
+
+    @Suppress("unused")
     fun testAssemblySnippet(testName:String, assembly:ArrayList<String>, anticipatedResults:ArrayList<Pair<String,Int>>, verbose:Boolean = false):Boolean {
         val cart = Cartridge()
         val m6502 = M6502(cart)
 
         // assemble the file
-        var assembler = Assembler(m6502, verbose)
+        val assembler = Assembler(m6502, verbose)
         val errorLevel = assembler.assembleProgram(assembly)
         if (errorLevel > 0) {
             println("$testName failed to compile properly!")
@@ -261,15 +270,15 @@ class M6502Tests : MemoryManager {
         m6502.runToBreak()
 
         // compare results
-        var processorState = m6502.GrabProcessorState()
-        var testsPassed = true;
+        val processorState = m6502.GrabProcessorState()
+        var testsPassed = true
         for (test in anticipatedResults) {
-            var passed = processorState.checkState(test.first, test.second, cart)
-            var passString = if (passed) "Passed" else "Failed"
+            val passed = processorState.checkState(test.first, test.second, cart)
+            val passString = if (passed) "Passed" else "Failed"
             println("${test.first} $passString")
             testsPassed = testsPassed and passed
         }
-        return testsPassed;
+        return testsPassed
     }
 }
 
@@ -282,7 +291,7 @@ fun main(args: Array<String>) {
     val m6502 = M6502(m6502Tests)
     var success = true
     for (cntr in 0..255)
-        if (m6502Tests.testM6502(m6502, cntr) != true) {
+        if ( ! m6502Tests.testM6502(m6502, cntr)) {
             println("Operation \$${cntr.toString(16).toUpperCase()} ${m6502.disassembleStep(cntr)} did not match ${m6502Tests.expectedResults[cntr]}")
             success = false
         }
