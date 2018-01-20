@@ -454,9 +454,48 @@ class Assembler(private val m6502: M6502, private var isVerbose:Boolean = false)
                         tokens.removeAt(indx)
                     }
 
-                // .HIGH
+                // .HIGH takes the high order byte of a number or label address resulting in single byte value
+                    "HIGH" -> {
+                        if (indx >= tokens.size) {
+                            throw AssemblyException("Missing parameters for .HIGH statement line $assemblyLine")
+                        }
+                        val num = when (tokens[indx].type) {
+                            AssemblerTokenTypes.NUMBER -> tokens[indx].num
+                            AssemblerTokenTypes.LABEL_LINK -> {
+                                val rep = variableList.get(tokens[indx].contents)
+                                if (rep == null) {
+                                    addLabel(AssemblerLabel(tokens[indx].contents, AssemblerLabelTypes.HIGH_BYTE, currentBank.curAddress+1, currentBank.number))
+                                    0
+                                } else {
+                                    rep.num
+                                }
+                            }
+                            else -> throw AssemblyException("Missing HIGH variable name on line $assemblyLine")
+                        }
+                        tokens[indx] = AssemblerToken(AssemblerTokenTypes.NUMBER, "high", (num / 256) and 255)
+                    }
+
                 // .JUMPTABLE
-                // .LOW
+                // .LOW takes the low order byte of a number or label address resulting in single byte value
+                    "LOW" -> {
+                        if (indx >= tokens.size) {
+                            throw AssemblyException("Missing parameters for .LOW statement line $assemblyLine")
+                        }
+                        val num = when (tokens[indx].type) {
+                            AssemblerTokenTypes.NUMBER -> tokens[indx].num
+                            AssemblerTokenTypes.LABEL_LINK -> {
+                                val rep = variableList.get(tokens[indx].contents)
+                                if (rep == null) {
+                                    addLabel(AssemblerLabel(tokens[indx].contents, AssemblerLabelTypes.LOW_BYTE, currentBank.curAddress+1, currentBank.number))
+                                    0
+                                } else {
+                                    rep.num
+                                }
+                            }
+                            else -> throw AssemblyException("Missing .LOW variable name on line $assemblyLine")
+                        }
+                        tokens[indx] = AssemblerToken(AssemblerTokenTypes.NUMBER, "high", num and 255)
+                    }
 
                 // .ORG changes address where code is to be generated within current bank
                     "ORG" -> {

@@ -247,6 +247,21 @@ class M6502Tests : MemoryManager {
             {println("ERROR .EQU machine language incorrect!"); return false}
         if (verbose) println("EQU directive tests passed!")
 
+        // .HIGH .LOW tests
+        errorCode = assembler.assembleProgram(arrayListOf (
+                ".BANK 0 $1000 1024",
+                ".EQU hilow $1234",
+                "LDA #.HIGH hilow",
+                "labelhl: LDA #.LOW hilow",
+                "LDA #.HIGH labelhl",
+                "LDA #.LOW labelhl",
+                "BRK" ))
+        if (errorCode > 0) {println("ERROR unable to assemble HIGH/LOW test!"); return false}
+        val highlow_expected = arrayOf(169,0x12, 169,0x34, 169,16, 169,2, 0)
+        if ( ! compareAssembly(assembler.banks[0].bankToIntArray(),highlow_expected))
+        {println("ERROR .HIGH .LOW machine language incorrect!"); return false}
+        if (verbose) println("HIGH LOW directive tests passed!")
+
         return true
     }
 
