@@ -278,6 +278,20 @@ class M6502Tests : MemoryManager {
         {println("ERROR Storage (.BYTE .WORD)machine language incorrect!"); return false}
         if (verbose) println("Storage directive tests passed!")
 
+        // Macro testing (.MSTART .MEND .MACRO) tests
+        errorCode = assembler.assembleProgram(arrayListOf (
+                ".MSTART DELAY 255", "LDX #P0","delayLoop:", "DEX", "BNE delayLoop", ".MEND",
+                ".MSTART LONGDELAY 2 255", "LDY #P0", "longDelayLoop:", ".MACRO DELAY P1", "DEY", "BNE longDelayLoop",
+                ".MEND", ".MACRO DELAY 1", ".MACRO DELAY 3", ".MACRO LONGDELAY 10 100" ))
+        if (errorCode > 0) {println("ERROR unable to assemble Macro test!"); return false}
+        val macro_expected = arrayOf(0xa2,0x01, 0xca, 0xd0,0xFD,
+                0xa2,0x03, 0xca, 0xd0,0xFD,
+                0xa0,10,  0xa2,100, 0xca, 0xd0,0xFD, 0x88, 0xd0,0xF8,
+                0)//0x10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 6, 16, 0)
+        if ( ! compareAssembly(assembler.banks[0].bankToIntArray(), macro_expected))
+        {println("ERROR Macro (.MSTART .MEND .MACRO) machine language incorrect!"); return false}
+        if (verbose) println("Macro directive tests passed!")
+
         return true
     }
 

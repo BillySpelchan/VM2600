@@ -100,7 +100,6 @@ class AssemblyBank(val number:Int, var size:Int = 4096, var bankOrigin:Int = 0) 
         writeBankByte(address - bankOrigin, data)
     }
 
-    @Suppress("unused")
     fun resize(bankSize:Int) {
         if (size == bankSize)
             return
@@ -114,9 +113,90 @@ class AssemblyBank(val number:Int, var size:Int = 4096, var bankOrigin:Int = 0) 
     }
 
     fun bankToIntArray():Array<Int> {
-        return Array<Int> (size, {cntr -> storage[cntr].toInt() and 255})
+        return Array (size, {cntr -> storage[cntr].toInt() and 255})
     }
 }
+
+// =================================================================================================================
+
+/**
+ * Holds the macro information which is simply an array of tokens that will get passed to the assembler when the
+ * macro is invoked. Macros created with .MSTART label p0 .. p9 followed by the code to be inserted. Labels
+ * within the code get tracked so internal labels get prefixed so each occurance will be unique labels. .MEND ends
+ * the macro with .MACRO name p0 .. p9 used to invoke the macro.
+ */
+class AssemblerMacro(val label:String) {
+    private var paramDefaults = Array(10, {AssemblerToken(AssemblerTokenTypes.NUMBER, "0", 0)})
+    private val paramNames = arrayListOf("P0", "P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9")
+    private var labels = mutableListOf<String>()
+    private var executionCount = 0
+    private var macroLines = arrayListOf<ArrayList<AssemblerToken>>()
+
+    /** sets the parameter to use if not specified by .MACRO command */
+    fun setDefaultParameter(paramID:Int, token:AssemblerToken) {
+        paramDefaults[paramID] = token
+    }
+
+    /**
+     * Adds lines to the macro returns true if macro is finished, false if still waiting for .MEND
+     */
+    fun addLine(line:ArrayList<AssemblerToken>):Boolean {
+        if (line.size < 1)
+            return false
+        // TODO do we want to do a more thorough check here? Probably should allow anywhere on line?
+        if ((line[0].type == AssemblerTokenTypes.DIRECTIVE) and (line[0].contents == "MEND")) {
+            return true
+        }
+        if (line[0].type == AssemblerTokenTypes.LABEL_DECLARATION)
+            labels.add(line[0].contents)
+        macroLines.add(line)
+        return false
+    }
+
+    /**
+     * Runs the provided macro replacing internal labels with prefixed versions and replacing labels P0..P9
+     * with the parameters that were passed using default parameters for missing parameters.
+     */
+    fun execute(assembler:Assembler, userParams:ArrayList<AssemblerToken>) {
+        // set params to default in case user didn't pass all of them
+        val params = paramDefaults.copyOf()
+        for (cntr in 0..userParams.size-1)
+            params[cntr] = userParams[cntr]
+
+        // make prefix for any declared labels
+        val prefix = "${executionCount}_"
+        ++executionCount
+
+        // run the lines through the assembler
+        for (cntrLine in 0 until macroLines.size) {
+            val adjustedLine = ArrayList<AssemblerToken>(macroLines[cntrLine])
+
+            for (cntrToken in 0 until adjustedLine.size) {
+                // adjust the internal labels and parameter references to the proper properties
+                val token:AssemblerToken = adjustedLine[cntrToken]
+                if (token.type == AssemblerTokenTypes.LABEL_DECLARATION)
+                    adjustedLine[cntrToken] = AssemblerToken(AssemblerTokenTypes.LABEL_DECLARATION,
+                            prefix + token.contents, token.num)
+                else if (token.type == AssemblerTokenTypes.LABEL_LINK) {
+                    if  (labels.contains(token.contents))
+                        adjustedLine[cntrToken] = AssemblerToken(AssemblerTokenTypes.LABEL_LINK,
+                                prefix + token.contents, token.num)
+                    else if (paramNames.contains(token.contents))
+                        adjustedLine[cntrToken] = params[paramNames.indexOf(token.contents)]
+                }
+            }
+
+            // run adjusted line through the parser
+            val ml = assembler.parse(adjustedLine)
+            if (ml.isNotEmpty()) {
+                for (data in ml) {
+                    assembler.currentBank.writeNextByte(data)
+                }
+            }
+        }
+    }
+}
+
 
 // =================================================================================================================
 
@@ -134,9 +214,11 @@ class Assembler(private val m6502: M6502, private var isVerbose:Boolean = false)
     private var labelList = HashMap<String, ArrayList<AssemblerLabel>>()
     var banks = ArrayList<AssemblyBank>()
 
+    private var macroList = HashMap<String, AssemblerMacro>()
+    private var macroInProgress:AssemblerMacro? = null
+
     /** build a hash-map of the mnemonics with all of the op codes so a particular mnemonic can seek out addressing
-     * modes th    var currentBank = 0;
-    at a mnemonic supports to find the appropriate op code for assembly
+     * modes that a mnemonic supports to find the appropriate op code for assembly
       */
     init {
         for (inst in m6502.commands) {
@@ -521,6 +603,43 @@ class Assembler(private val m6502: M6502, private var isVerbose:Boolean = false)
                         tokens[indx] = AssemblerToken(AssemblerTokenTypes.NUMBER, "high", num and 255)
                     }
 
+                // .MSTART label P0 P1 ... P9 -> sets up macro with rest of line being treated as default parameters
+                    "MSTART" -> {
+                        if (indx >= tokens.size) {
+                            throw AssemblyException("Missing Label for .MSTART statement line $assemblyLine")
+                        }
+                        val macroLabel = tokens[indx].contents
+                        tokens.removeAt(indx)
+                        macroInProgress = AssemblerMacro(macroLabel)
+                        var paramIndx = 0
+                        while (tokens.size > indx) {
+                            macroInProgress!!.setDefaultParameter(paramIndx, tokens[indx])
+                            ++paramIndx
+                            tokens.removeAt(indx)
+                        }
+                    }
+
+                    "MACRO" -> {
+                        // find macro to run or throw exception if can't be found
+                        if (indx >= tokens.size) {
+                            throw AssemblyException("Missing Label for .MACRO statement line $assemblyLine")
+                        }
+                        val macroToRun = macroList.get(tokens[indx].contents)
+                        tokens.removeAt(indx)
+                        if (macroToRun == null)
+                            throw AssemblyException("Macro ${tokens[indx].contents} Not defined! line $assemblyLine")
+
+                        // set up macro parameters that were passed
+                        val macParams = ArrayList<AssemblerToken>()
+                        while (indx < tokens.size) {
+                            macParams.add(tokens[indx])
+                            tokens.removeAt(indx)
+                        }
+
+                        // run the macro
+                        macroToRun.execute(this, macParams)
+                    }
+
                 // .ORG changes address where code is to be generated within current bank
                     "ORG" -> {
                         if (indx >= tokens.size) {
@@ -568,7 +687,6 @@ class Assembler(private val m6502: M6502, private var isVerbose:Boolean = false)
 
                     else -> {
                         println("WARNING: Unknown directive used $assemblyLine $directive")
-                        tokens.removeAt(indx)
                     }
                 }
             } else
@@ -617,6 +735,14 @@ class Assembler(private val m6502: M6502, private var isVerbose:Boolean = false)
         var resultArray:Array<Int> = arrayOf()
         if (tokens.size == 0) return resultArray
 
+        // if recording a macro then send lines to macro instead
+        if (macroInProgress != null) {
+            if (macroInProgress!!.addLine(tokens)) {
+                macroList.put(macroInProgress!!.label, macroInProgress!!)
+                macroInProgress = null
+            }
+            return arrayOf()
+        }
         var indx = 0
 
         // see if line starts with a label - note label declarations take precedence so .byte,.word,.string, etc will
