@@ -8,14 +8,20 @@ interface MemoryManager {
 enum class AddressMode {ABSOLUTE, ABSOLUTE_X, ABSOLUTE_Y, ACCUMULATOR, FUTURE_EXPANSION, IMMEDIATE, IMPLIED,
     INDIRECT, INDIRECT_X, INDIRECT_Y, RELATIVE, ZERO_PAGE, ZERO_PAGE_X, ZERO_PAGE_Y}
 
+// Flag constants used by processor state
+const val CARRY_FLAG = 1
+const val ZERO_FLAG = 2
+const val INTERRUPT_FLAG = 4
+const val DECIMAL_FLAG = 8
+const val BREAK_FLAG = 16
+const val OVERFLOW_FLAG = 64
+const val NEGATIVE_FLAG = 128
+
+/**
+ * Holds the Processors current state (registers and flags)
+ */
 data class ProcessorState(var acc:Int, var x:Int, var y:Int, var ip:Int, var flags:Int, var sp:Int, var tick:Long) {
-    val CARRY = 1
-    val ZERO = 2
-    val INTERRUPT = 4
-    val DECIMAL = 8
-    val BREAK = 16
-    val OVERFLOW = 64
-    val NEGATIVE = 128
+    var ipNext = ip
 
     fun checkState(regmem:String, expected:Int, mem:MemoryManager? = null):Boolean {
         var reg = regmem.toUpperCase()
@@ -31,13 +37,13 @@ data class ProcessorState(var acc:Int, var x:Int, var y:Int, var ip:Int, var fla
             "Y" -> y == expected
             "IP" -> ip == expected
             "FLAGS" -> flags == expected
-            "C" -> ((flags and CARRY) > 0) == (expected > 0)
-            "Z" -> ((flags and ZERO) > 0) == (expected > 0)
-            "I"-> ((flags and INTERRUPT) > 0) == (expected > 0)
-            "D"-> ((flags and DECIMAL) > 0) == (expected > 0)
-            "B"-> ((flags and BREAK) > 0) == (expected > 0)
-            "V"-> ((flags and OVERFLOW) > 0) == (expected > 0)
-            "N" -> ((flags and NEGATIVE) > 0) == (expected > 0)
+            "C" -> ((flags and CARRY_FLAG) > 0) == (expected > 0)
+            "Z" -> ((flags and ZERO_FLAG) > 0) == (expected > 0)
+            "I"-> ((flags and INTERRUPT_FLAG) > 0) == (expected > 0)
+            "D"-> ((flags and DECIMAL_FLAG) > 0) == (expected > 0)
+            "B"-> ((flags and BREAK_FLAG) > 0) == (expected > 0)
+            "V"-> ((flags and OVERFLOW_FLAG) > 0) == (expected > 0)
+            "N" -> ((flags and NEGATIVE_FLAG) > 0) == (expected > 0)
             "M" -> if (mem != null) mem.read(addr) == expected else false
             else -> {
                 println("Error: unknown register or memory request $regmem.")
@@ -47,12 +53,13 @@ data class ProcessorState(var acc:Int, var x:Int, var y:Int, var ip:Int, var fla
     }
 }
 
+@Suppress("MemberVisibilityCanPrivate")
 class M6502Instruction(val OPCode:Int, val OPString:String, val size:Int, val addressMode:AddressMode, val cycles:Int,
                        var command:(m6502:M6502)->Unit) {
 
 
     fun execute(m6502:M6502) {
-        command(m6502);
+        command(m6502)
     }
 }
 
@@ -102,7 +109,11 @@ class M6502(var mem:MemoryManager) {
             M6502Instruction(0x15, "ORA",2, AddressMode.ZERO_PAGE_X, 4, {m->m.notImplemented()}),
             M6502Instruction(0x16, "ASL",2, AddressMode.ZERO_PAGE_X, 6, {m->m.notImplemented()}),
             M6502Instruction(0x17, "X17", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0x18, "CLC",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
+            M6502Instruction(0x18, "CLC",1, AddressMode.IMPLIED, 2, {m->
+                run {
+                    m.state.flags = m.state.flags and (255 xor CARRY_FLAG)
+                }
+            }),
             M6502Instruction(0x19, "ORA",3, AddressMode.ABSOLUTE_Y, 4, {m->m.notImplemented()}),
             M6502Instruction(0x1A, "X1A", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x1B, "X1B", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
@@ -136,7 +147,11 @@ class M6502(var mem:MemoryManager) {
             M6502Instruction(0x35, "AND",2, AddressMode.ZERO_PAGE_X, 4, {m->m.notImplemented()}),
             M6502Instruction(0x36, "ROL",2, AddressMode.ZERO_PAGE_X, 6, {m->m.notImplemented()}),
             M6502Instruction(0x37, "X37", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0x38, "SEC",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
+            M6502Instruction(0x38, "SEC",1, AddressMode.IMPLIED, 2, {m->
+                run {
+                    m.state.flags = m.state.flags or CARRY_FLAG
+                }
+            }),
             M6502Instruction(0x39, "AND",3, AddressMode.ABSOLUTE_Y, 4, {m->m.notImplemented()}),
             M6502Instruction(0x3A, "X3A", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x3B, "X3B", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
@@ -354,23 +369,23 @@ class M6502(var mem:MemoryManager) {
     /** This is a placeholder function called by future expansion operations so that if such an opcode is ever executed
      * it will be notificed so that in the future the invalid instruction can be implemented
      */
-    fun futureExpansion() {
+    private fun futureExpansion() {
         println("WARNING Future Expansion OPeration $${mem.read(state.ip)} called at ${state.ip} ")
     }
 
     /** During the development of the emulator, not all instructions will be available so this is used to indicate that
      * the given instruction has yet to be completed.
      */
-    fun notImplemented() {
+    private fun notImplemented() {
         val ip = state.ip
-        val inst = commands[mem.read(ip)]
-        println("${ip} : ${disassembleStep(ip)} has not yet been implemented")
+//        val inst = commands[mem.read(ip)]
+        println("$ip : ${disassembleStep(ip)} has not yet been implemented")
     }
 
     /** Utility function to calculate the address that an instruction is referring to. The 6502 uses little endian so
      * the low order byte  is followed by the high order (page)
      */
-    fun findAbsoluteAddress(address:Int):Int {
+    private fun findAbsoluteAddress(address:Int):Int {
         return (mem.read(address+2) * 256 + mem.read(address+1))
     }
 
@@ -388,19 +403,19 @@ class M6502(var mem:MemoryManager) {
         // output of the instruction will be based on teh address mode
         when(cmd.addressMode) {
             AddressMode.ABSOLUTE -> {
-                sb.append('$');
-                sb.append(findAbsoluteAddress(address).toString(16).toUpperCase());
+                sb.append('$')
+                sb.append(findAbsoluteAddress(address).toString(16).toUpperCase())
             }
 
             AddressMode.ABSOLUTE_X -> {
-                sb.append('$');
-                sb.append(findAbsoluteAddress(address).toString(16).toUpperCase());
+                sb.append('$')
+                sb.append(findAbsoluteAddress(address).toString(16).toUpperCase())
                 sb.append(", X")
             }
 
             AddressMode.ABSOLUTE_Y-> {
-                sb.append('$');
-                sb.append(findAbsoluteAddress(address).toString(16).toUpperCase());
+                sb.append('$')
+                sb.append(findAbsoluteAddress(address).toString(16).toUpperCase())
                 sb.append(", Y")
             }
 
@@ -459,7 +474,7 @@ class M6502(var mem:MemoryManager) {
                 sb.append(", Y")
             }
 
-            else -> sb.append("Unknown addressing mode")
+            //else -> sb.append("Unknown addressing mode")
         }
 
         return sb.toString()
@@ -468,20 +483,23 @@ class M6502(var mem:MemoryManager) {
     // runs the next instruction. The address of this is determined by the IP address
     fun runCommand() {
         val ip = state.ip
-        commands[mem.read(ip)].execute(this);
+        commands[mem.read(ip)].execute(this)
     }
 
-    fun runToBreak() {
+    fun runToBreak(address:Int = -1) {
+        if (address >=0)
+            state.ip = address
         var opCode = mem.read(state.ip)
         while (opCode != 0) {
-            state.ip += commands[opCode].size
+            state.ipNext = state.ip + commands[opCode].size
             state.tick += commands[opCode].cycles
             commands[opCode].execute(this)
+            state.ip = state.ipNext
             opCode = mem.read(state.ip)
         }
     }
 
-    fun GrabProcessorState(): ProcessorState {
+    fun grabProcessorState(): ProcessorState {
         return ProcessorState(state.acc, state.x, state.y, state.ip, state.flags, state.sp, state.tick)
     }
 }

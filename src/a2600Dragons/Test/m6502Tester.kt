@@ -296,7 +296,6 @@ class M6502Tests : MemoryManager {
     }
 
 
-    @Suppress("unused")
     fun testAssemblySnippet(testName:String, assembly:ArrayList<String>, anticipatedResults:ArrayList<Pair<String,Int>>, verbose:Boolean = false):Boolean {
         val cart = Cartridge()
         val m6502 = M6502(cart)
@@ -312,20 +311,37 @@ class M6502Tests : MemoryManager {
         // run until break
         for (cntr in 0..4095)
             cart.write(cntr, assembler.currentBank.readBankAddress(cntr))
-        m6502.runToBreak()
+        m6502.runToBreak(0)
 
         // compare results
-        val processorState = m6502.GrabProcessorState()
+        val processorState = m6502.grabProcessorState()
         var testsPassed = true
         for (test in anticipatedResults) {
             val passed = processorState.checkState(test.first, test.second, cart)
             val passString = if (passed) "Passed" else "Failed"
-            println("${test.first} $passString")
+            println("${test.first}=${test.second} $passString")
             testsPassed = testsPassed and passed
         }
         return testsPassed
     }
+
+    /**
+     * Processor Instructions tests in implementation order
+     */
+    fun testRunningInstrutions(verbose:Boolean = false):Boolean {
+        var testResults = true
+        testResults = testResults and testAssemblySnippet("SEC Test",
+                arrayListOf( "CLC", "SEC", "BRK"),
+                arrayListOf(Pair("C", 1)), verbose)
+
+        testResults = testResults and testAssemblySnippet("CLC Test",
+                arrayListOf( "SEC", "CLC", "BRK"),
+                arrayListOf(Pair("C", 0)), verbose)
+        return testResults
+    }
+
 }
+
 
 /**
  * Tester code.
@@ -351,6 +367,7 @@ fun main(args: Array<String>) {
     println(if (m6502Tests.testNoLabelAssembly(verbose)) "Can assemble properly (without labels)" else "*** PROBLEMS WITH ASSEMBLING ***")
     println(if (m6502Tests.testLabelAssembly(verbose)) "Can assemble properly (with labels)" else "*** PROBLEMS WITH ASSEMBLING LABELS ***")
 
-    println(if (m6502Tests.testDirectives(true/*verbose*/)) "Can work with directives" else "*** PROBLEMS WITH DIRECTIVES ***")
+    println(if (m6502Tests.testDirectives(verbose)) "Can work with directives" else "*** PROBLEMS WITH DIRECTIVES ***")
+    println(if (m6502Tests.testRunningInstrutions(true/*verbose*/)) "Processor instructions work" else "*** PROBLEMS WITH PROCESSOR EMULATION ***")
 
 }
