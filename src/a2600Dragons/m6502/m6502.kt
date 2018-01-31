@@ -185,7 +185,10 @@ class M6502(var mem:MemoryManager) {
             M6502Instruction(0x55, "EOR",2, AddressMode.ZERO_PAGE_X, 4, {m->m.notImplemented()}),
             M6502Instruction(0x56, "LSR",2, AddressMode.ZERO_PAGE_X, 6, {m->m.notImplemented()}),
             M6502Instruction(0x57, "X57", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0x58, "CLI",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
+            M6502Instruction(0x58, "CLI",1, AddressMode.IMPLIED, 2, {m->
+                run {
+                    m.state.flags = m.state.flags and (255 xor INTERRUPT_FLAG)
+                } }),
             M6502Instruction(0x59, "EOR",3, AddressMode.ABSOLUTE_Y, 4, {m->m.notImplemented()}),
             M6502Instruction(0x5A, "X5A", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x5B, "X5B", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
@@ -219,7 +222,10 @@ class M6502(var mem:MemoryManager) {
             M6502Instruction(0x75, "ADC",2, AddressMode.ZERO_PAGE_X, 4, {m->m.notImplemented()}),
             M6502Instruction(0x76, "ROR",2, AddressMode.ZERO_PAGE_X, 6, {m->m.notImplemented()}),
             M6502Instruction(0x77, "X77", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0x78, "SEI",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
+            M6502Instruction(0x78, "SEI",1, AddressMode.IMPLIED, 2, {m->
+                run {
+                    m.state.flags = m.state.flags or INTERRUPT_FLAG
+                } }),
             M6502Instruction(0x79, "ADC",3, AddressMode.ABSOLUTE_Y, 4, {m->m.notImplemented()}),
             M6502Instruction(0x7A, "X7A", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x7B, "X7B", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
@@ -287,7 +293,10 @@ class M6502(var mem:MemoryManager) {
             M6502Instruction(0xB5, "LDA",2, AddressMode.ZERO_PAGE_X, 4, {m->m.notImplemented()}),
             M6502Instruction(0xB6, "LDX",2, AddressMode.ZERO_PAGE_Y, 4, {m->m.notImplemented()}),
             M6502Instruction(0xB7, "XB7", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0xB8, "CLV",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
+            M6502Instruction(0xB8, "CLV",1, AddressMode.IMPLIED, 2, {m->
+                run {
+                    m.state.flags = m.state.flags and (255 xor OVERFLOW_FLAG)
+                } }),
             M6502Instruction(0xB9, "LDA",3, AddressMode.ABSOLUTE_Y, 4, {m->m.notImplemented()}),
             M6502Instruction(0xBA, "TSX",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
             M6502Instruction(0xBB, "XBB", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),

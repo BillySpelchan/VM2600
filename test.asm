@@ -93,9 +93,26 @@ longDelayLoop:
 	BRK
 ; Expect D = 1
 
-
 ; CLD test makes sure Decimal mode is clear (0)
 	SED
 	CLD
 	BRK
 ; Expect D = 0
+
+
+; CLI test
+	SEI
+	CLI
+	BRK
+; Expect I = 0
+
+; SEI should clear then interupts
+	CLI
+	SEI
+	BRK
+; Expect I = 1
+
+; CLO test - write better test when have ADC implemented!
+	CLV
+	BRK
+; Expect V = 0

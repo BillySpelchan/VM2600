@@ -319,7 +319,7 @@ class M6502Tests : MemoryManager {
         for (test in anticipatedResults) {
             val passed = processorState.checkState(test.first, test.second, cart)
             val passString = if (passed) "Passed" else "Failed"
-            println("${test.first}=${test.second} $passString")
+            if (verbose) println("$testName: ${test.first}=${test.second} $passString")
             testsPassed = testsPassed and passed
         }
         return testsPassed
@@ -347,12 +347,26 @@ class M6502Tests : MemoryManager {
                 arrayListOf(Pair("D", 1)), verbose)
 
         // CLD
-        testResults = testResults and testAssemblySnippet("CLC Test",
+        testResults = testResults and testAssemblySnippet("CLD Test",
                 arrayListOf( "SED", "CLD", "BRK"),
                 arrayListOf(Pair("D", 0)), verbose)
 
-        // more flag tests comming soon
-        if ( ! testResults) { println("Failed durring Flag setting tests!"); return false }
+        // SEI
+        testResults = testResults and testAssemblySnippet("SEI Test",
+                arrayListOf( "CLI", "SEI", "BRK"),
+                arrayListOf(Pair("I", 1)), verbose)
+
+        // CLI
+        testResults = testResults and testAssemblySnippet("CLI Test",
+                arrayListOf( "SEI", "CLI", "BRK"),
+                arrayListOf(Pair("I", 0)), verbose)
+
+        // CLV - need better test, redo when ADC has been implemented!
+        testResults = testResults and testAssemblySnippet("CLV Test",
+                arrayListOf( "CLV", "BRK"),
+                arrayListOf(Pair("V", 0)), verbose)
+
+        if ( ! testResults) { println("Failed during Flag setting tests!"); return false }
 
 
         return testResults
@@ -386,6 +400,6 @@ fun main(args: Array<String>) {
     println(if (m6502Tests.testLabelAssembly(verbose)) "Can assemble properly (with labels)" else "*** PROBLEMS WITH ASSEMBLING LABELS ***")
 
     println(if (m6502Tests.testDirectives(verbose)) "Can work with directives" else "*** PROBLEMS WITH DIRECTIVES ***")
-    println(if (m6502Tests.testRunningInstrutions(true/*verbose*/)) "Processor instructions work" else "*** PROBLEMS WITH PROCESSOR EMULATION ***")
+    println(if (m6502Tests.testRunningInstrutions(verbose)) "Processor instructions work" else "*** PROBLEMS WITH PROCESSOR EMULATION ***")
 
 }
