@@ -330,13 +330,31 @@ class M6502Tests : MemoryManager {
      */
     fun testRunningInstrutions(verbose:Boolean = false):Boolean {
         var testResults = true
+        // * Flag setting tests *
+        // SEC
         testResults = testResults and testAssemblySnippet("SEC Test",
                 arrayListOf( "CLC", "SEC", "BRK"),
                 arrayListOf(Pair("C", 1)), verbose)
 
+        // CLC
         testResults = testResults and testAssemblySnippet("CLC Test",
                 arrayListOf( "SEC", "CLC", "BRK"),
                 arrayListOf(Pair("C", 0)), verbose)
+
+        // SED
+        testResults = testResults and testAssemblySnippet("SED Test",
+                arrayListOf( "CLD", "SED", "BRK"),
+                arrayListOf(Pair("D", 1)), verbose)
+
+        // CLD
+        testResults = testResults and testAssemblySnippet("CLC Test",
+                arrayListOf( "SED", "CLD", "BRK"),
+                arrayListOf(Pair("D", 0)), verbose)
+
+        // more flag tests comming soon
+        if ( ! testResults) { println("Failed durring Flag setting tests!"); return false }
+
+
         return testResults
     }
 

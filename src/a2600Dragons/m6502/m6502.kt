@@ -321,7 +321,10 @@ class M6502(var mem:MemoryManager) {
             M6502Instruction(0xD5, "CMP",2, AddressMode.ZERO_PAGE_X, 4, {m->m.notImplemented()}),
             M6502Instruction(0xD6, "DEC",2, AddressMode.ZERO_PAGE_X, 4, {m->m.notImplemented()}),
             M6502Instruction(0xD7, "XD7", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0xD8, "CLD",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
+            M6502Instruction(0xD8, "CLD",1, AddressMode.IMPLIED, 2, {m->
+                run {
+                    m.state.flags = m.state.flags and (255 xor DECIMAL_FLAG)
+                }}),
             M6502Instruction(0xD9, "CMP",3, AddressMode.ABSOLUTE_Y, 4, {m->m.notImplemented()}),
             M6502Instruction(0xDA, "XDA", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xDB, "XDB", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
@@ -355,7 +358,10 @@ class M6502(var mem:MemoryManager) {
             M6502Instruction(0xF5, "SBC",2, AddressMode.ZERO_PAGE_X, 4, {m->m.notImplemented()}),
             M6502Instruction(0xF6, "INC",2, AddressMode.ZERO_PAGE_X, 4, {m->m.notImplemented()}),
             M6502Instruction(0xF7, "XF2", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0xF8, "SED",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
+            M6502Instruction(0xF8, "SED",1, AddressMode.IMPLIED, 2, {m->
+                run {
+                    m.state.flags = m.state.flags or DECIMAL_FLAG
+                }}),
             M6502Instruction(0xF9, "SBC",3, AddressMode.ABSOLUTE_Y, 4, {m->m.notImplemented()}),
             M6502Instruction(0xFA, "XFA", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xFB, "XFB", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),

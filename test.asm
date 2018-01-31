@@ -79,6 +79,7 @@ longDelayLoop:
 	BRK
 ; Expect C = 1
 
+
 ; CLC test makes sure Carry is clear (0)
 	SEC
 	CLC
@@ -86,3 +87,15 @@ longDelayLoop:
 ; Expect C = 0
 
 
+; SED test makes sure Decimal mode is set (1)
+	CLD
+	SED
+	BRK
+; Expect D = 1
+
+
+; CLD test makes sure Decimal mode is clear (0)
+	SED
+	CLD
+	BRK
+; Expect D = 0
