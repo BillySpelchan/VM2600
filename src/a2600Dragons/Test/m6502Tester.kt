@@ -401,6 +401,26 @@ class M6502Tests : MemoryManager {
                 arrayListOf( "LDY 100", "BRK", ".ORG 100", ".BYTE 128"),
                 arrayListOf(Pair("Y", 128), Pair("z", 0), Pair("n", 1)), verLoad)
 
+        // LDA Zero page,x
+        testResults = testResults and testAssemblySnippet("LDA Zero page,x",
+                arrayListOf( "LDX #10", "LDA 5,X", "BRK", ".ORG 15", ".BYTE 99"),
+                arrayListOf(Pair("A", 99)), verLoad)
+
+        // LDY Zero page,x
+        testResults = testResults and testAssemblySnippet("LDY Zero page,x",
+                arrayListOf( "LDX #5", "LDY 5,X", "BRK", ".ORG 10", ".BYTE 12"),
+                arrayListOf(Pair("Y", 12)), verLoad)
+
+        // LDX Zero page,Y
+        testResults = testResults and testAssemblySnippet("LDX Zero page,Y",
+                arrayListOf( "LDY #15", "LDX 10,Y", "BRK", ".ORG 25", ".BYTE 52"),
+                arrayListOf(Pair("X", 52)), verLoad)
+
+        // LDA, LDX, LDY Absolute
+        testResults = testResults and testAssemblySnippet("LDA, LDX, LDY Absolute",
+                arrayListOf( "LDA 1024", "LDX 1025", "LDY 1026", "BRK", ".ORG 1024", ".BYTE 1 2 3"),
+                arrayListOf(Pair("A", 1), Pair("X", 2), Pair("Y", 3)), verLoad)
+
         return testResults
     }
 

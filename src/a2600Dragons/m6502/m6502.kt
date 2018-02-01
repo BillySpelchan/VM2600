@@ -292,18 +292,30 @@ class M6502(var mem:MemoryManager) {
             } }),
             M6502Instruction(0xAA, "TAX",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
             M6502Instruction(0xAB, "XAB", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0xAC, "LDY",3, AddressMode.ABSOLUTE, 4, {m->m.notImplemented()}),
-            M6502Instruction(0xAD, "LDA",3, AddressMode.ABSOLUTE, 4, {m->m.notImplemented()}),
-            M6502Instruction(0xAE, "LDX",3, AddressMode.ABSOLUTE, 4, {m->m.notImplemented()}),
+            M6502Instruction(0xAC, "LDY",3, AddressMode.ABSOLUTE, 4, {m->run {
+                m.state.y = m.loadByteFromAddress(m.findAbsoluteAddress(m.state.ip))
+            } }),
+            M6502Instruction(0xAD, "LDA",3, AddressMode.ABSOLUTE, 4, {m->run {
+                m.state.acc = m.loadByteFromAddress(m.findAbsoluteAddress(m.state.ip))
+            } }),
+            M6502Instruction(0xAE, "LDX",3, AddressMode.ABSOLUTE, 4, {m->run {
+                m.state.x = m.loadByteFromAddress(m.findAbsoluteAddress(m.state.ip))
+            } }),
             M6502Instruction(0xAF, "XAF", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
 
             M6502Instruction(0xB0, "BCS",2, AddressMode.RELATIVE, 2, {m->m.notImplemented()}),
             M6502Instruction(0xB1, "LDA",2, AddressMode.INDIRECT_Y, 5, {m->m.notImplemented()}),
             M6502Instruction(0xB2, "XB2", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xB3, "XB3", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0xB4, "LDY",2, AddressMode.ZERO_PAGE_X, 4, {m->m.notImplemented()}),
-            M6502Instruction(0xB5, "LDA",2, AddressMode.ZERO_PAGE_X, 4, {m->m.notImplemented()}),
-            M6502Instruction(0xB6, "LDX",2, AddressMode.ZERO_PAGE_Y, 4, {m->m.notImplemented()}),
+            M6502Instruction(0xB4, "LDY",2, AddressMode.ZERO_PAGE_X, 4, {m->run {
+                m.state.y = m.loadByteFromAddress(m.loadByteFromAddress(m.state.ip, 1), m.state.x)
+            } }),
+            M6502Instruction(0xB5, "LDA",2, AddressMode.ZERO_PAGE_X, 4, {m->run {
+                m.state.acc = m.loadByteFromAddress(m.loadByteFromAddress(m.state.ip, 1), m.state.x)
+            } }),
+            M6502Instruction(0xB6, "LDX",2, AddressMode.ZERO_PAGE_Y, 4, {m->run {
+                m.state.x = m.loadByteFromAddress(m.loadByteFromAddress(m.state.ip, 1), m.state.y)
+            } }),
             M6502Instruction(0xB7, "XB7", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xB8, "CLV",1, AddressMode.IMPLIED, 2, {m->
                 run {
