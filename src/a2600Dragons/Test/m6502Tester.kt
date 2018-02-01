@@ -368,6 +368,38 @@ class M6502Tests : MemoryManager {
 
         if ( ! testResults) { println("Failed during Flag setting tests!"); return false }
 
+        // let us be able to force section to be verbose
+        val verLoad = true;
+
+        // LDA Immediate - zero test ; expect a=0; z=1; n=0
+        testResults = testResults and testAssemblySnippet("LDA Immediate",
+                arrayListOf( "LDA #0", "BRK"),
+                arrayListOf(Pair("a", 0), Pair("z", 1), Pair("n", 0)), verLoad)
+
+        // LDX Immediate - negative test ; expect x=255; z=0; n=1
+        testResults = testResults and testAssemblySnippet("LDX Immediate",
+                arrayListOf( "LDX #\$FF", "BRK"),
+                arrayListOf(Pair("x", 255), Pair("z", 0), Pair("n", 1)), verLoad)
+
+        // LDY Immediate - positive test
+        testResults = testResults and testAssemblySnippet("LDY Immediate",
+                arrayListOf( "LDY #127", "BRK"),
+                arrayListOf(Pair("Y", 127), Pair("z", 0), Pair("n", 0)), verLoad)
+
+        // LDA Zero page - positive test
+        testResults = testResults and testAssemblySnippet("LDA Zero page",
+                arrayListOf( "LDA 5", "BRK", ".ORG 5", ".BYTE 42"),
+                arrayListOf(Pair("A", 42), Pair("z", 0), Pair("n", 0)), verLoad)
+
+        // LDX Zero page - zero test
+        testResults = testResults and testAssemblySnippet("LDX Zero Page",
+                arrayListOf( "LDX 200", "BRK", ".ORG 200", ".BYTE 0"),
+                arrayListOf(Pair("X", 0), Pair("z", 1), Pair("n", 0)), verLoad)
+
+        // LDY Zero page - negative test
+        testResults = testResults and testAssemblySnippet("LDY Zero Page",
+                arrayListOf( "LDY 100", "BRK", ".ORG 100", ".BYTE 128"),
+                arrayListOf(Pair("Y", 128), Pair("z", 0), Pair("n", 1)), verLoad)
 
         return testResults
     }
