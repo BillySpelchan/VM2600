@@ -193,10 +193,43 @@ longDelayLoop:
 .BYTE 1 2 3
 	; expect a = 1, x=2, y=3
 	
+; LDA and LDY Absolute,X 
+	LDX #10
+	LDA 512,X
+	LDY 513,X
+	BRK
+.ORG 522
+.BYTE 1 2
+	; expect a = 1, y=2
 
- 
-// Absolute,X  BD *
-//  Absolute,Y B9 *
-//  (Indirect,X) A1
-//  (Indirect),Y B1 *
- 
+
+; LDA and LDX Absolute,Y
+	LDY #10
+	LDA 512,Y
+	LDX 513,Y
+	BRK
+.ORG 522
+.BYTE 1 2
+	; expect a = 1, x=2
+
+
+; LDA (Indirect,X)
+	LDX #200
+	LDA (54,X)
+	BRK
+.ORG 254
+.WORD 1024
+.ORG 1024
+.BYTE 88
+	; expect A=88
+	
+	
+; LDA (Indirect),Y 
+	LDY #10
+	LDA (254),Y
+	BRK
+.ORG 254
+.WORD 1024
+.ORG 1034
+.BYTE 88
+	; expect A=88

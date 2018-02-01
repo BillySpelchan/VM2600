@@ -368,8 +368,9 @@ class M6502Tests : MemoryManager {
 
         if ( ! testResults) { println("Failed during Flag setting tests!"); return false }
 
-        // let us be able to force section to be verbose
-        val verLoad = true;
+        // * Register Loading Tests*
+        // let us be able to force Loading section to be verbose for debugging by setting verLoad to true
+        val verLoad = verbose
 
         // LDA Immediate - zero test ; expect a=0; z=1; n=0
         testResults = testResults and testAssemblySnippet("LDA Immediate",
@@ -420,6 +421,26 @@ class M6502Tests : MemoryManager {
         testResults = testResults and testAssemblySnippet("LDA, LDX, LDY Absolute",
                 arrayListOf( "LDA 1024", "LDX 1025", "LDY 1026", "BRK", ".ORG 1024", ".BYTE 1 2 3"),
                 arrayListOf(Pair("A", 1), Pair("X", 2), Pair("Y", 3)), verLoad)
+
+        // LDA and LDY Absolute,X
+        testResults = testResults and testAssemblySnippet("LDA and LDY Absolute,X",
+                arrayListOf( "LDX #10", "LDA 512,X", "LDY 513,X", "BRK", ".ORG 522", ".BYTE 1 2 3"),
+                arrayListOf(Pair("A", 1), Pair("Y", 2)), verLoad)
+
+        // LDA and LDX Absolute,Y
+        testResults = testResults and testAssemblySnippet("LDA and LDX Absolute,Y",
+                arrayListOf( "LDY #10", "LDA 512,Y", "LDX 513,Y", "BRK", ".ORG 522", ".BYTE 1 2 3"),
+                arrayListOf(Pair("A", 1), Pair("X", 2)), verLoad)
+
+        // LDA (Indirect,X)
+        testResults = testResults and testAssemblySnippet("LDA (Indirect,X)",
+                arrayListOf( "LDX #200", "LDA (54,X)", "BRK", ".ORG 254", ".WORD 1024", ".ORG 1024", ".BYTE 88"),
+                arrayListOf(Pair("A", 88)), verLoad)
+
+        // LDA (Indirect),Y
+        testResults = testResults and testAssemblySnippet("LDA (Indirect),Y",
+                arrayListOf( "LDY #10", "LDA (254),Y", "BRK", ".ORG 254", ".WORD 1024", ".ORG 1034", ".BYTE 88"),
+                arrayListOf(Pair("A", 88)), verLoad)
 
         return testResults
     }

@@ -271,7 +271,11 @@ class M6502(var mem:MemoryManager) {
             M6502Instruction(0xA0, "LDY",2, AddressMode.IMMEDIATE, 2, {m->run {
                 m.state.y = m.loadByteFromAddress(m.state.ip, 1)
             } }),
-            M6502Instruction(0xA1, "LDA",2, AddressMode.INDIRECT_X, 6, {m->m.notImplemented()}),
+            M6502Instruction(0xA1, "LDA",2, AddressMode.INDIRECT_X, 6, {m->
+                m.state.acc = m.loadByteFromAddress(m.findAbsoluteAddress(
+                        // need to deduct 1 from loadByteFromAddress method as it is designed to skip opcode
+                        ((m.loadByteFromAddress(m.state.ip, 1)+m.state.x) and 255)-1))
+            }),
             M6502Instruction(0xA2, "LDX",2, AddressMode.IMMEDIATE, 2, {m->run {
                 m.state.x = m.loadByteFromAddress(m.state.ip, 1)
             } }),
@@ -304,7 +308,11 @@ class M6502(var mem:MemoryManager) {
             M6502Instruction(0xAF, "XAF", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
 
             M6502Instruction(0xB0, "BCS",2, AddressMode.RELATIVE, 2, {m->m.notImplemented()}),
-            M6502Instruction(0xB1, "LDA",2, AddressMode.INDIRECT_Y, 5, {m->m.notImplemented()}),
+            M6502Instruction(0xB1, "LDA",2, AddressMode.INDIRECT_Y, 5, {m->
+                m.state.acc = m.loadByteFromAddress(m.findAbsoluteAddress(
+                        // need to deduct 1 from loadByteFromAddress method as it is designed to skip opcode
+                        (m.loadByteFromAddress(m.state.ip, 1)-1)), m.state.y, true)
+            }),
             M6502Instruction(0xB2, "XB2", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xB3, "XB3", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xB4, "LDY",2, AddressMode.ZERO_PAGE_X, 4, {m->run {
@@ -321,12 +329,20 @@ class M6502(var mem:MemoryManager) {
                 run {
                     m.state.flags = m.state.flags and (255 xor OVERFLOW_FLAG)
                 } }),
-            M6502Instruction(0xB9, "LDA",3, AddressMode.ABSOLUTE_Y, 4, {m->m.notImplemented()}),
+            M6502Instruction(0xB9, "LDA",3, AddressMode.ABSOLUTE_Y, 4, {	m->run {
+                m.state.acc = m.loadByteFromAddress(m.findAbsoluteAddress(m.state.ip), m.state.y, true)
+            }}),
             M6502Instruction(0xBA, "TSX",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
             M6502Instruction(0xBB, "XBB", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0xBC, "LDY",3, AddressMode.ABSOLUTE_X, 4, {m->m.notImplemented()}),
-            M6502Instruction(0xBD, "LDA",3, AddressMode.ABSOLUTE_X, 4, {m->m.notImplemented()}),
-            M6502Instruction(0xBE, "LDX",3, AddressMode.ABSOLUTE_Y, 4, {m->m.notImplemented()}),
+            M6502Instruction(0xBC, "LDY",3, AddressMode.ABSOLUTE_X, 4, {	m->run {
+                m.state.y = m.loadByteFromAddress(m.findAbsoluteAddress(m.state.ip), m.state.x, true)
+            }}),
+            M6502Instruction(0xBD, "LDA",3, AddressMode.ABSOLUTE_X, 4, {m->run {
+                m.state.acc = m.loadByteFromAddress(m.findAbsoluteAddress(m.state.ip), m.state.x, true)
+            } }),
+            M6502Instruction(0xBE, "LDX",3, AddressMode.ABSOLUTE_Y, 4, {	m->run {
+                m.state.x = m.loadByteFromAddress(m.findAbsoluteAddress(m.state.ip), m.state.y, true)
+            }}),
             M6502Instruction(0xBF, "XBF", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
 
             M6502Instruction(0xC0, "CPY",2, AddressMode.IMMEDIATE, 2, {m->m.notImplemented()}),
@@ -447,10 +463,13 @@ class M6502(var mem:MemoryManager) {
     }
 
 
-    fun loadByteFromAddress(address:Int, offset:Int = 0):Int {
+    /** Loads a byte from the indicated address setting the zero and negative flags if appropriate. */
+    fun loadByteFromAddress(address:Int, offset:Int = 0, checkBounds:Boolean = false):Int {
         val result:Int = mem.read(address + offset)
         adjustFlag (ZERO_FLAG, result == 0)
         adjustFlag (NEGATIVE_FLAG, (result and 128) > 0)
+        if (checkBounds)
+            pageBoundsCheck(address, address+offset)
 
         return result
     }
