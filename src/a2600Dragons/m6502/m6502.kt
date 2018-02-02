@@ -251,7 +251,9 @@ class M6502(var mem:MemoryManager) {
             M6502Instruction(0x87, "X87", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x88, "DEY",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
             M6502Instruction(0x89, "X89", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0x8A, "TXA",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
+            M6502Instruction(0x8A, "TXA",1, AddressMode.IMPLIED, 2, {_->
+                state.acc = setNumberFlags(state.x)
+            }),
             M6502Instruction(0x8B, "X8B", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x8C, "STY",3, AddressMode.ABSOLUTE, 4, {_->
                 mem.write(findAbsoluteAddress(state.ip), state.y)
@@ -277,7 +279,9 @@ class M6502(var mem:MemoryManager) {
                 mem.write(mem.read(state.ip+1) + state.y, state.x)
             }),
             M6502Instruction(0x97, "X97", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0x98, "TYA",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
+            M6502Instruction(0x98, "TYA",1, AddressMode.IMPLIED, 2, {_->
+                state.acc = setNumberFlags(state.y)
+            }),
             M6502Instruction(0x99, "STA",3, AddressMode.ABSOLUTE_Y, 5, {_->
                 mem.write(findAbsoluteAddress(state.ip)+state.y, state.acc) }),
             M6502Instruction(0x9A, "TXS",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
@@ -310,11 +314,15 @@ class M6502(var mem:MemoryManager) {
                 m.state.x = m.loadByteFromAddress(m.loadByteFromAddress(m.state.ip, 1))
             } }),
             M6502Instruction(0xA7, "XA7", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0xA8, "TAY",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
+            M6502Instruction(0xA8, "TAY",1, AddressMode.IMPLIED, 2, {_->
+                state.y = setNumberFlags(state.acc)
+            }),
             M6502Instruction(0xA9, "LDA",2, AddressMode.IMMEDIATE, 2, {m->run {
                 m.state.acc = m.loadByteFromAddress(m.state.ip, 1)
             } }),
-            M6502Instruction(0xAA, "TAX",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
+            M6502Instruction(0xAA, "TAX",1, AddressMode.IMPLIED, 2, {_->
+                state.x = setNumberFlags(state.acc)
+            }),
             M6502Instruction(0xAB, "XAB", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xAC, "LDY",3, AddressMode.ABSOLUTE, 4, {m->run {
                 m.state.y = m.loadByteFromAddress(m.findAbsoluteAddress(m.state.ip))
@@ -482,6 +490,13 @@ class M6502(var mem:MemoryManager) {
         return (mem.read(address+2) * 256 + mem.read(address+1))
     }
 
+
+    /** Sets zero and negative flags to match particular number and returns that number for chaining */
+    fun setNumberFlags(num:Int):Int {
+        adjustFlag (ZERO_FLAG, num == 0)
+        adjustFlag (NEGATIVE_FLAG, (num and 128) > 0)
+        return num
+    }
 
     /** Loads a byte from the indicated address setting the zero and negative flags if appropriate. */
     fun loadByteFromAddress(address:Int, offset:Int = 0, checkBounds:Boolean = false):Int {

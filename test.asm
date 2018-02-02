@@ -272,3 +272,30 @@ longDelayLoop:
 	STY $250	;  Absolute
 	BRK
 ;M50, M55, M250 = 33
+
+
+; ********************************************
+; *** TRANSFERRING BETWEEN REGISTERS TESTS ***
+; ********************************************
+
+; TXA TAY test
+	LDX #179
+	TXA
+	TAY
+	BRK
+; Acc, Y=79, N=1, Z=0
+
+; TYA TAX test
+	LDY #24
+	TYA
+	TAX
+	BRK
+; Acc, X=24, N=0, Z=0
+
+; Transfer zero test
+	LDA #0
+	LDX #23
+	TAX
+	BRK
+; Acc, X=0, N=0, Z=1
+	

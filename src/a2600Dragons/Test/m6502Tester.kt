@@ -442,10 +442,10 @@ class M6502Tests : MemoryManager {
                 arrayListOf( "LDY #10", "LDA (254),Y", "BRK", ".ORG 254", ".WORD 1024", ".ORG 1034", ".BYTE 88"),
                 arrayListOf(Pair("A", 88)), verLoad)
 
-        // * Register Loading Tests*
+        // * Register Storing Tests*
 
-        // let us be able to force Loading section to be verbose for debugging by setting verLoad to true
-        val verStore = true // verbose
+        // let us be able to force Storing section to be verbose for debugging by setting verLoad to true
+        val verStore = verbose
 
         // STA Tests (all three)
         testResults = testResults and testAssemblySnippet("STA tests (all seven modes)",
@@ -463,6 +463,26 @@ class M6502Tests : MemoryManager {
         testResults = testResults and testAssemblySnippet("STY Tests (all three)",
                 arrayListOf(	"LDX #5", "LDY #33", "STY \$50", "STY \$50,X", "STY \$250", "BRK" ),
                 arrayListOf(Pair("M50", 33), Pair("M55", 33),Pair("M250", 33) ), verStore)
+
+        // * Transferring between registers tests *
+
+        // let us be able to force transfer section to be verbose for debugging by setting verLoad to true
+        val verTrans = true // verbose
+
+        // TXA TAY test
+        testResults = testResults and testAssemblySnippet("TXA TAY test",
+                arrayListOf(	"LDX #179", "TXA", "TAY", "BRK" ),
+                arrayListOf(Pair("A", 179), Pair("Y", 179), Pair("N", 1), Pair("Z", 0) ), verTrans)
+
+        // TYA TAX test
+        testResults = testResults and testAssemblySnippet("TYA TAX test",
+                arrayListOf(	"LDY #24", "TYA", "TAX", "BRK" ),
+                arrayListOf(Pair("A", 24), Pair("X", 24), Pair("N", 0), Pair("Z", 0) ), verTrans)
+
+        // Transfer 0 test
+        testResults = testResults and testAssemblySnippet("Transfer 0 test",
+                arrayListOf(	"LDA #0", "LDX #23", "TAX", "BRK" ),
+                arrayListOf(Pair("A", 0), Pair("X", 0), Pair("N", 0), Pair("Z", 1) ), verTrans)
 
         return testResults
     }
