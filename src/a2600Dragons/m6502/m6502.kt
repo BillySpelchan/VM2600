@@ -235,36 +235,56 @@ class M6502(var mem:MemoryManager) {
             M6502Instruction(0x7F, "X7F", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
 
             M6502Instruction(0x80, "X80", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0x81, "STA",2, AddressMode.INDIRECT_X, 6, {m->m.notImplemented()}),
+            M6502Instruction(0x81, "STA",2, AddressMode.INDIRECT_X, 6, {_->
+                mem.write(findAbsoluteAddress(((mem.read(state.ip+1)+state.x) and 255)-1), state.acc) }),
             M6502Instruction(0x82, "X82", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x83, "X83", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0x84, "STY",2, AddressMode.ZERO_PAGE, 3, {m->m.notImplemented()}),
-            M6502Instruction(0x85, "STA",2, AddressMode.ZERO_PAGE, 3, {m->m.notImplemented()}),
-            M6502Instruction(0x86, "STX",2, AddressMode.ZERO_PAGE, 3, {m->m.notImplemented()}),
+            M6502Instruction(0x84, "STY",2, AddressMode.ZERO_PAGE, 3, {_->
+                mem.write(mem.read(state.ip+1), state.y)
+            }),
+            M6502Instruction(0x85, "STA",2, AddressMode.ZERO_PAGE, 3, {m->
+                mem.write(mem.read(state.ip+1), state.acc)
+            }),
+            M6502Instruction(0x86, "STX",2, AddressMode.ZERO_PAGE, 3, {_->
+                mem.write(mem.read(state.ip+1), state.x)
+            }),
             M6502Instruction(0x87, "X87", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x88, "DEY",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
             M6502Instruction(0x89, "X89", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x8A, "TXA",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
             M6502Instruction(0x8B, "X8B", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0x8C, "STY",3, AddressMode.ABSOLUTE, 4, {m->m.notImplemented()}),
-            M6502Instruction(0x8D, "STA",3, AddressMode.ABSOLUTE, 4, {m->m.notImplemented()}),
-            M6502Instruction(0x8E, "STX",3, AddressMode.ABSOLUTE, 4, {m->m.notImplemented()}),
+            M6502Instruction(0x8C, "STY",3, AddressMode.ABSOLUTE, 4, {_->
+                mem.write(findAbsoluteAddress(state.ip), state.y)
+            }),
+            M6502Instruction(0x8D, "STA",3, AddressMode.ABSOLUTE, 4, {_->
+                mem.write(findAbsoluteAddress(state.ip), state.acc) }),
+            M6502Instruction(0x8E, "STX",3, AddressMode.ABSOLUTE, 4, {_->
+                mem.write(findAbsoluteAddress(state.ip), state.x)
+            }),
             M6502Instruction(0x8F, "X8F", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
 
             M6502Instruction(0x90, "BCC",2, AddressMode.RELATIVE, 2, {m->m.notImplemented()}),
-            M6502Instruction(0x91, "STA",2, AddressMode.INDIRECT_Y, 6, {m->m.notImplemented()}),
+            M6502Instruction(0x91, "STA",2, AddressMode.INDIRECT_Y, 6, {_->
+                mem.write(findAbsoluteAddress(mem.read(state.ip+1) -1) + state.y, state.acc) }),
             M6502Instruction(0x92, "X92", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x93, "X93", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0x94, "STY",2, AddressMode.ZERO_PAGE_X, 4, {m->m.notImplemented()}),
-            M6502Instruction(0x95, "STA",2, AddressMode.ZERO_PAGE_X, 4, {m->m.notImplemented()}),
-            M6502Instruction(0x96, "STX",2, AddressMode.ZERO_PAGE_Y, 4, {m->m.notImplemented()}),
+            M6502Instruction(0x94, "STY",2, AddressMode.ZERO_PAGE_X, 4, {_->
+                mem.write(mem.read(state.ip+1) + state.x, state.y)
+            }),
+            M6502Instruction(0x95, "STA",2, AddressMode.ZERO_PAGE_X, 4, {_->
+                mem.write(mem.read(state.ip+1) + state.x, state.acc)}),
+            M6502Instruction(0x96, "STX",2, AddressMode.ZERO_PAGE_Y, 4, {_->
+                mem.write(mem.read(state.ip+1) + state.y, state.x)
+            }),
             M6502Instruction(0x97, "X97", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x98, "TYA",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
-            M6502Instruction(0x99, "STA",3, AddressMode.ABSOLUTE_Y, 5, {m->m.notImplemented()}),
+            M6502Instruction(0x99, "STA",3, AddressMode.ABSOLUTE_Y, 5, {_->
+                mem.write(findAbsoluteAddress(state.ip)+state.y, state.acc) }),
             M6502Instruction(0x9A, "TXS",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
             M6502Instruction(0x9B, "X9B", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x9C, "X9C", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0x9D, "STA",3, AddressMode.ABSOLUTE_X, 5, {m->m.notImplemented()}),
+            M6502Instruction(0x9D, "STA",3, AddressMode.ABSOLUTE_X, 5, {_->
+                mem.write(findAbsoluteAddress(state.ip)+state.x, state.acc)}),
             M6502Instruction(0x9E, "X9E", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x9F, "X9F", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
 
@@ -369,7 +389,7 @@ class M6502(var mem:MemoryManager) {
             M6502Instruction(0xD4, "XD4", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xD5, "CMP",2, AddressMode.ZERO_PAGE_X, 4, {m->m.notImplemented()}),
             M6502Instruction(0xD6, "DEC",2, AddressMode.ZERO_PAGE_X, 4, {m->m.notImplemented()}),
-            M6502Instruction(0xD7, "XD7", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
+            M6502Instruction(0xD7, "XD7", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->futureExpansion()}),
             M6502Instruction(0xD8, "CLD",1, AddressMode.IMPLIED, 2, {m->
                 run {
                     m.state.flags = m.state.flags and (255 xor DECIMAL_FLAG)
@@ -473,6 +493,7 @@ class M6502(var mem:MemoryManager) {
 
         return result
     }
+
 
     /** Create a dissaembly of the instruction that is located at a particular IP address
      * Any address can be used so that this can be used to display dissaembly of code as

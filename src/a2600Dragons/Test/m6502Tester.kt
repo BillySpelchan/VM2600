@@ -442,6 +442,28 @@ class M6502Tests : MemoryManager {
                 arrayListOf( "LDY #10", "LDA (254),Y", "BRK", ".ORG 254", ".WORD 1024", ".ORG 1034", ".BYTE 88"),
                 arrayListOf(Pair("A", 88)), verLoad)
 
+        // * Register Loading Tests*
+
+        // let us be able to force Loading section to be verbose for debugging by setting verLoad to true
+        val verStore = true // verbose
+
+        // STA Tests (all three)
+        testResults = testResults and testAssemblySnippet("STA tests (all seven modes)",
+                arrayListOf(	"LDA #123",	"LDX #\$10", "LDY #5", "STA \$AB", "STA \$AB,X", "STA \$250",
+                        "STA \$250,X", "STA \$250,Y", "STA (\$50,X)", "STA (\$60),Y",".ORG $60",".WORD $600"),
+                arrayListOf(Pair("MAB", 123), Pair("MBB", 123), Pair("M250", 123),Pair("M260", 123),
+                        Pair("M255", 123), Pair("M600", 123),Pair("M605", 123) ), verStore)
+
+        // STX Tests (all three)
+        testResults = testResults and testAssemblySnippet("STX Tests (all three)",
+                arrayListOf(	"LDX #22", "LDY #5", "STX \$50", "STX \$50,Y", "STX \$250", "BRK" ),
+                arrayListOf(Pair("M50", 22), Pair("M55", 22),Pair("M250", 22) ), verStore)
+
+        // STY Tests (all three)
+        testResults = testResults and testAssemblySnippet("STY Tests (all three)",
+                arrayListOf(	"LDX #5", "LDY #33", "STY \$50", "STY \$50,X", "STY \$250", "BRK" ),
+                arrayListOf(Pair("M50", 33), Pair("M55", 33),Pair("M250", 33) ), verStore)
+
         return testResults
     }
 

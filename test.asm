@@ -233,3 +233,42 @@ longDelayLoop:
 .ORG 1034
 .BYTE 88
 	; expect A=88
+
+	
+; *******************************
+; *** STORING REGISTERS TESTS ***
+; *******************************
+
+; STA tests (all seven modes)
+	LDA #123
+	LDX #$10
+	LDY #5
+	STA $AB	; zero page
+	STA $AB,X
+	STA $250
+	STA $250,X
+	STA $250,Y
+	STA ($50,X)
+	STA ($60),Y
+	BRK
+.ORG $60
+.WORD $600
+;MAB, MBB, M250, M260, M255, M600, M605 = 123
+
+; STX Tests (all three)
+	LDX #22
+	LDY #5
+	STX $50 	;  Zero Page
+	STX $50,Y	;  Zero Page,Y
+	STX $250	;  Absolute
+	BRK
+;M50, M55, M250 = 22
+
+; STY Tests (all three)
+	LDX #5
+	LDY #33
+	STY $50 	;  Zero Page
+	STY $50,X	;  Zero Page,X
+	STY $250	;  Absolute
+	BRK
+;M50, M55, M250 = 33
