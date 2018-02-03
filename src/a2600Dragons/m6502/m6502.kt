@@ -36,6 +36,7 @@ data class ProcessorState(var acc:Int, var x:Int, var y:Int, var ip:Int, var fla
             "X" -> x == expected
             "Y" -> y == expected
             "IP" -> ip == expected
+            "S", "SP" -> sp == expected
             "FLAGS" -> flags == expected
             "C" -> ((flags and CARRY_FLAG) > 0) == (expected > 0)
             "Z" -> ((flags and ZERO_FLAG) > 0) == (expected > 0)
@@ -68,20 +69,8 @@ class M6502Instruction(val OPCode:Int, val OPString:String, val size:Int, val ad
  * using the current virtual state of the processor. Work is done by using a table of operations with a lamda function
  * for performing the execution.
  */
-class M6502(var mem:MemoryManager) {
-    var state = ProcessorState(0,0,0,0,0,0,0)
-    /*
-    var x:Int = 0
-        set (n) {field = n and 255}
-    var y:Int = 0
-        set (n) {field = n and 255}
-    var acc:Int = 0
-        set (n) {field = n and 255}
-    var flags:Int = 0
-    var IP = 0
-    var SP = 0
-    var tick:Long = 0
-    */
+class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
+    var state = ProcessorState(0,0,0,0,32,0,0)
     // array of instructions indexed by op code
     val commands = arrayOf(
             M6502Instruction(0x00, "BRK", 1,AddressMode.IMPLIED, 7, {mach->mach.notImplemented()}),
@@ -92,7 +81,9 @@ class M6502(var mem:MemoryManager) {
             M6502Instruction(0x05, "ORA",2, AddressMode.ZERO_PAGE, 6, {m->m.notImplemented()}),
             M6502Instruction(0x06, "ASL",2, AddressMode.ZERO_PAGE, 5, {m->m.notImplemented()}),
             M6502Instruction(0x07, "X07", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0x08, "PHP",1, AddressMode.IMPLIED, 3, {m->m.notImplemented()}),
+            M6502Instruction(0x08, "PHP",1, AddressMode.IMPLIED, 3, {_->
+                pushByteOnStack(state.flags)
+            }),
             M6502Instruction(0x09, "ORA",2, AddressMode.IMMEDIATE, 2, {m->m.notImplemented()}),
             M6502Instruction(0x0A, "ASL",1, AddressMode.ACCUMULATOR, 2, {m->m.notImplemented()}),
             M6502Instruction(0x0B, "X0B", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
@@ -130,7 +121,9 @@ class M6502(var mem:MemoryManager) {
             M6502Instruction(0x25, "AND",2, AddressMode.ZERO_PAGE, 3, {m->m.notImplemented()}),
             M6502Instruction(0x26, "ROL",2, AddressMode.ZERO_PAGE, 5, {m->m.notImplemented()}),
             M6502Instruction(0x27, "X27", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0x28, "PLP",1, AddressMode.IMPLIED, 4, {m->m.notImplemented()}),
+            M6502Instruction(0x28, "PLP",1, AddressMode.IMPLIED, 4, {_->
+                state.flags = pullByteFromStack()
+            }),
             M6502Instruction(0x29, "AND",2, AddressMode.IMMEDIATE, 2, {m->m.notImplemented()}),
             M6502Instruction(0x2A, "ROL",1, AddressMode.ACCUMULATOR, 2, {m->m.notImplemented()}),
             M6502Instruction(0x2B, "X2B", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
@@ -168,7 +161,9 @@ class M6502(var mem:MemoryManager) {
             M6502Instruction(0x45, "EOR",2, AddressMode.ZERO_PAGE, 3, {m->m.notImplemented()}),
             M6502Instruction(0x46, "LSR",2, AddressMode.ZERO_PAGE, 5, {m->m.notImplemented()}),
             M6502Instruction(0x47, "X47", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0x48, "PHA",1, AddressMode.IMPLIED, 3, {m->m.notImplemented()}),
+            M6502Instruction(0x48, "PHA",1, AddressMode.IMPLIED, 3, {_->
+                pushByteOnStack(state.acc)
+            }),
             M6502Instruction(0x49, "EOR",2, AddressMode.IMMEDIATE, 2, {m->m.notImplemented()}),
             M6502Instruction(0x4A, "LSR",1, AddressMode.ACCUMULATOR, 2, {m->m.notImplemented()}),
             M6502Instruction(0x4B, "X4B", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
@@ -205,7 +200,9 @@ class M6502(var mem:MemoryManager) {
             M6502Instruction(0x65, "ADC",2, AddressMode.ZERO_PAGE, 3, {m->m.notImplemented()}),
             M6502Instruction(0x66, "ROR",2, AddressMode.ZERO_PAGE, 5, {m->m.notImplemented()}),
             M6502Instruction(0x67, "X67", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0x68, "PLA",1, AddressMode.IMPLIED, 4, {m->m.notImplemented()}),
+            M6502Instruction(0x68, "PLA",1, AddressMode.IMPLIED, 4, {_->
+                state.acc = pullByteFromStack(true)
+            }),
             M6502Instruction(0x69, "ADC",2, AddressMode.IMMEDIATE, 2, {m->m.notImplemented()}),
             M6502Instruction(0x6A, "ROR",1, AddressMode.ACCUMULATOR, 2, {m->m.notImplemented()}),
             M6502Instruction(0x6B, "X6B", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
@@ -284,7 +281,9 @@ class M6502(var mem:MemoryManager) {
             }),
             M6502Instruction(0x99, "STA",3, AddressMode.ABSOLUTE_Y, 5, {_->
                 mem.write(findAbsoluteAddress(state.ip)+state.y, state.acc) }),
-            M6502Instruction(0x9A, "TXS",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
+            M6502Instruction(0x9A, "TXS",1, AddressMode.IMPLIED, 2, {_->
+                state.sp = state.x
+            }),
             M6502Instruction(0x9B, "X9B", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x9C, "X9C", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x9D, "STA",3, AddressMode.ABSOLUTE_X, 5, {_->
@@ -360,7 +359,9 @@ class M6502(var mem:MemoryManager) {
             M6502Instruction(0xB9, "LDA",3, AddressMode.ABSOLUTE_Y, 4, {	m->run {
                 m.state.acc = m.loadByteFromAddress(m.findAbsoluteAddress(m.state.ip), m.state.y, true)
             }}),
-            M6502Instruction(0xBA, "TSX",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
+            M6502Instruction(0xBA, "TSX",1, AddressMode.IMPLIED, 2, {_->
+                state.x = setNumberFlags(state.sp)
+            }),
             M6502Instruction(0xBB, "XBB", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xBC, "LDY",3, AddressMode.ABSOLUTE_X, 4, {	m->run {
                 m.state.y = m.loadByteFromAddress(m.findAbsoluteAddress(m.state.ip), m.state.x, true)
@@ -416,7 +417,11 @@ class M6502(var mem:MemoryManager) {
             M6502Instruction(0xE3, "XE3", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xE4, "CPX",2, AddressMode.ZERO_PAGE, 3, {m->m.notImplemented()}),
             M6502Instruction(0xE5, "SBC",2, AddressMode.ZERO_PAGE, 3, {m->m.notImplemented()}),
-            M6502Instruction(0xE6, "INC",2, AddressMode.ZERO_PAGE, 3, {m->m.notImplemented()}),
+            M6502Instruction(0xE6, "INC",2, AddressMode.ZERO_PAGE, 3, {_-> run {
+                    val addressToInc = mem.read(state.ip+1)
+                    mem.write(addressToInc, setNumberFlags((mem.read(addressToInc) + 1) and 255))
+                }
+            }),
             M6502Instruction(0xE7, "XE7", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xE8, "INX",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
             M6502Instruction(0xE9, "SBC",2, AddressMode.IMMEDIATE, 2, {m->m.notImplemented()}),
@@ -509,6 +514,21 @@ class M6502(var mem:MemoryManager) {
         return result
     }
 
+    /** write indicated byte to stack adjusting stack pointer */
+    fun pushByteOnStack(num:Int) {
+        val stackAddress = stackPage * 256 + state.sp
+        state.sp = (state.sp - 1) and 255
+        mem.write(stackAddress, num)
+    }
+
+    /** Read byte from stack while adjusting stack pointer */
+    fun pullByteFromStack(adjustFlags:Boolean = false):Int {
+        state.sp = (state.sp +1) and 255
+        val num = mem.read(stackPage * 256 + state.sp)
+        if (adjustFlags)
+            setNumberFlags(num)
+        return num
+    }
 
     /** Create a dissaembly of the instruction that is located at a particular IP address
      * Any address can be used so that this can be used to display dissaembly of code as

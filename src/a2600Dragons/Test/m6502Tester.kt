@@ -442,6 +442,8 @@ class M6502Tests : MemoryManager {
                 arrayListOf( "LDY #10", "LDA (254),Y", "BRK", ".ORG 254", ".WORD 1024", ".ORG 1034", ".BYTE 88"),
                 arrayListOf(Pair("A", 88)), verLoad)
 
+        if ( ! testResults) { println("Failed Register Loading tests!"); return false }
+
         // * Register Storing Tests*
 
         // let us be able to force Storing section to be verbose for debugging by setting verLoad to true
@@ -464,10 +466,12 @@ class M6502Tests : MemoryManager {
                 arrayListOf(	"LDX #5", "LDY #33", "STY \$50", "STY \$50,X", "STY \$250", "BRK" ),
                 arrayListOf(Pair("M50", 33), Pair("M55", 33),Pair("M250", 33) ), verStore)
 
+        if ( ! testResults) { println("Failed Register Storing tests!"); return false }
+
         // * Transferring between registers tests *
 
         // let us be able to force transfer section to be verbose for debugging by setting verLoad to true
-        val verTrans = true // verbose
+        val verTrans = verbose
 
         // TXA TAY test
         testResults = testResults and testAssemblySnippet("TXA TAY test",
@@ -484,6 +488,37 @@ class M6502Tests : MemoryManager {
                 arrayListOf(	"LDA #0", "LDX #23", "TAX", "BRK" ),
                 arrayListOf(Pair("A", 0), Pair("X", 0), Pair("N", 0), Pair("Z", 1) ), verTrans)
 
+        if ( ! testResults) { println("Failed Register transfer tests!"); return false }
+
+        // * Stack tests *
+
+        val verStack = true // verbose
+
+        // TSX and TXS
+        testResults = testResults and testAssemblySnippet("TSX and TXS",
+                arrayListOf(	"LDX #128", "TXS", "LDX #0", "TSX", "BRK" ),
+                arrayListOf(Pair("SP", 128), Pair("X", 128) ), verStack)
+
+        // Stack Pushing test
+        testResults = testResults and testAssemblySnippet("Stack Pushing test",
+                arrayListOf(	"LDX #255", "TXS", "LDA #11", "SED", "LDY #0", "PHP", "PHA", "BRK" ),
+                arrayListOf(Pair("SP", 253), Pair("M1FE", 11), Pair("M1FF", 42) ), verStack)
+
+        // Stack Pulling test
+        testResults = testResults and testAssemblySnippet("Stack Pulling test",
+                arrayListOf(	"LDX #253", "TXS", "PLA", "PLP", "BRK", ".ORG \$1FE", ".BYTE 11 42" ),
+                arrayListOf(Pair("SP", 255), Pair("A", 11), Pair("Flags", 42) ), verStack)
+
+        if ( ! testResults) { println("Failed Stack tests!"); return false }
+
+/*; Stack popping test
+	PLA
+	PLP
+	BRK
+.ORG $1FE
+.BYTE 11 42
+; sp = 253, M1FE=11 M1FF=42
+*/
         return testResults
     }
 

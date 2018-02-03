@@ -299,3 +299,35 @@ longDelayLoop:
 	BRK
 ; Acc, X=0, N=0, Z=1
 	
+
+; ********************
+; *** STACK TEESTS ***
+; ********************
+	
+; TSX and TXS
+	LDX #128
+	TXS
+	LDX #0
+	TSX
+	BRK
+; X, SP = 128
+
+; Stack Pushing test
+	LDX #255
+	TXS
+	LDA #11
+	SED
+	LDY #0	; set zero flag so flag register should now be 42
+	PHP
+	PHA
+; sp = 253, M1FE=11 M1FF=42	
+
+; Stack popping test
+	PLA
+	PLP
+	BRK
+.ORG $1FE
+.BYTE 11 42
+; sp = 253, M1FE=11 M1FF=42	
+
+	
