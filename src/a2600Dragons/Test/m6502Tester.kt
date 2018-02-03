@@ -492,7 +492,7 @@ class M6502Tests : MemoryManager {
 
         // * Stack tests *
 
-        val verStack = true // verbose
+        val verStack = verbose
 
         // TSX and TXS
         testResults = testResults and testAssemblySnippet("TSX and TXS",
@@ -511,14 +511,24 @@ class M6502Tests : MemoryManager {
 
         if ( ! testResults) { println("Failed Stack tests!"); return false }
 
-/*; Stack popping test
-	PLA
-	PLP
-	BRK
-.ORG $1FE
-.BYTE 11 42
-; sp = 253, M1FE=11 M1FF=42
-*/
+        // * Incrementing and decrementing tests *
+
+        val verInc = true // verbose
+
+        // Incrementing
+        testResults = testResults and testAssemblySnippet("Incrementing",
+                arrayListOf("LDX #$10", "LDY #255", "INC $50", "INC $41,X", "INC $110", "INC $101,X",
+                        "INX", "INY", "BRK", ".ORG $50", ".BYTE 1 2", ".ORG $110", ".BYTE 3 4" ),
+                arrayListOf(Pair("M50", 2), Pair("M51", 3), Pair("M110", 4), Pair("M111", 5), Pair("X", 17),
+                        Pair("Y", 0), Pair("Z", 1) ), verInc)
+
+        // Decrementing
+        testResults = testResults and testAssemblySnippet("Decrementing",
+                arrayListOf("LDX #$10", "LDY #0", "DEC $50", "DEC $41,X", "DEC $110", "DEC $101,X",
+                        "DEX", "DEY", "BRK", ".ORG $50", ".BYTE 1 2", ".ORG $110", ".BYTE 3 4" ),
+                arrayListOf(Pair("M50", 0), Pair("M51", 1), Pair("M110", 2), Pair("M111", 3), Pair("X", 15),
+                        Pair("Y", 255), Pair("N", 1) ), verInc)
+
         return testResults
     }
 

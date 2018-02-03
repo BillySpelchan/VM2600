@@ -330,4 +330,39 @@ longDelayLoop:
 .BYTE 11 42
 ; sp = 253, M1FE=11 M1FF=42	
 
-	
+
+; *************************************
+; *** INCREMENT and DECREMENT TESTS ***
+; *************************************
+
+; INC, INX, INY tests
+	LDX #$10
+	LDY #255
+	INC $50
+	INC $41,X
+	INC $110
+	INC $101,X
+	INX
+	INY
+	BRK
+.ORG $50
+.BYTE 1 2
+.ORG $110
+.BYTE 3 4
+; expect M50=2, M51=3, M110=4, M111=5, X=17, Y=0, Z=1
+
+; DEC, DEX, DEY tests
+	LDX #$10
+	LDY #0
+	DEC $50
+	DEC $41,X
+	DEC $110
+	DEC $101,X
+	DEX
+	DEY
+	BRK
+.ORG $50
+.BYTE 1 2
+.ORG $110
+.BYTE 3 4
+; expect M50=0, M51=1, M110=2, M111=3, X=15, Y=255, N=1
