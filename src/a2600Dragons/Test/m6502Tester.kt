@@ -513,7 +513,7 @@ class M6502Tests : MemoryManager {
 
         // * Incrementing and decrementing tests *
 
-        val verInc = true // verbose
+        val verInc =  verbose
 
         // Incrementing
         testResults = testResults and testAssemblySnippet("Incrementing",
@@ -528,6 +528,30 @@ class M6502Tests : MemoryManager {
                         "DEX", "DEY", "BRK", ".ORG $50", ".BYTE 1 2", ".ORG $110", ".BYTE 3 4" ),
                 arrayListOf(Pair("M50", 0), Pair("M51", 1), Pair("M110", 2), Pair("M111", 3), Pair("X", 15),
                         Pair("Y", 255), Pair("N", 1) ), verInc)
+
+        // * basic branching (BEQ,BNE,BPL,BMI) tests *
+
+        val verBBranch = true // verbose
+
+        // BEQ
+        testResults = testResults and testAssemblySnippet("BEQ",
+                arrayListOf("LDY #1", "LDX #1", "BEQ done", "INY", "DEX", "BEQ done", "DEY", "done: BRK" ),
+                arrayListOf(Pair("Y", 2) ), verBBranch)
+
+        // BNE test 5 + 5 using iny and looping
+        testResults = testResults and testAssemblySnippet("BNE",
+                arrayListOf("LDY #5", "LDX #5", "add: INY", "DEX", "BNE add", "BRK" ),
+                arrayListOf(Pair("Y", 10) ), verBBranch)
+
+        // BMI -> ABS(-16) the hard way
+        testResults = testResults and testAssemblySnippet("BMI",
+                arrayListOf("LDX #\$F0", "LDY #0", "add: INY", "INX", "BMI add", "BRK" ),
+                arrayListOf(Pair("Y", 16) ), verBBranch)
+
+        // BPL - Count to 28 the hard way
+        testResults = testResults and testAssemblySnippet("BPL",
+                arrayListOf("LDX #100", "LDY #0", "count: INY", "INX", "BPL count", "BRK" ),
+                arrayListOf(Pair("Y", 28) ), verBBranch)
 
         return testResults
     }

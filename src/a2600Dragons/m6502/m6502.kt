@@ -92,7 +92,9 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             M6502Instruction(0x0E, "ASL",3, AddressMode.ABSOLUTE, 6, {m->m.notImplemented()}),
             M6502Instruction(0x0F, "X0F", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
 
-            M6502Instruction(0x10, "BPL",2, AddressMode.RELATIVE, 2, {m->m.notImplemented()}),
+            M6502Instruction(0x10, "BPL",2, AddressMode.RELATIVE, 2, {_->
+                processBranch(state.flags and NEGATIVE_FLAG != NEGATIVE_FLAG, mem.read(state.ip+1) )
+            }),
             M6502Instruction(0x11, "ORA",2, AddressMode.INDIRECT_Y, 5, {m->m.notImplemented()}),
             M6502Instruction(0x12, "X12", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x13, "X13", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
@@ -132,7 +134,9 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             M6502Instruction(0x2E, "ROL",3, AddressMode.ABSOLUTE, 6, {m->m.notImplemented()}),
             M6502Instruction(0x2F, "X2F", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
 
-            M6502Instruction(0x30, "BMI",2, AddressMode.RELATIVE, 2, {m->m.notImplemented()}),
+            M6502Instruction(0x30, "BMI",2, AddressMode.RELATIVE, 2, {_->
+                processBranch(state.flags and NEGATIVE_FLAG == NEGATIVE_FLAG, mem.read(state.ip+1) )
+            }),
             M6502Instruction(0x31, "AND",2, AddressMode.INDIRECT_Y, 5, {m->m.notImplemented()}),
             M6502Instruction(0x32, "X32", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x33, "X33", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
@@ -403,7 +407,9 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             }}),
             M6502Instruction(0xCF, "XCF", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
 
-            M6502Instruction(0xD0, "BNE",2, AddressMode.RELATIVE, 2, {m->m.notImplemented()}),
+            M6502Instruction(0xD0, "BNE",2, AddressMode.RELATIVE, 2, {_->
+                processBranch(state.flags and ZERO_FLAG != ZERO_FLAG, mem.read(state.ip+1) )
+            }),
             M6502Instruction(0xD1, "CMP",2, AddressMode.INDIRECT_Y, 5, {m->m.notImplemented()}),
             M6502Instruction(0xD2, "XD2", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xD3, "XD3", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
@@ -455,7 +461,9 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             }}),
             M6502Instruction(0xEF, "XEF", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
 
-            M6502Instruction(0xF0, "BEQ",2, AddressMode.RELATIVE, 2, {m->m.notImplemented()}),
+            M6502Instruction(0xF0, "BEQ",2, AddressMode.RELATIVE, 2, {_->
+                processBranch(state.flags and ZERO_FLAG == ZERO_FLAG, mem.read(state.ip+1) )
+            }),
             M6502Instruction(0xF1, "SBC",2, AddressMode.INDIRECT_Y, 5, {m->m.notImplemented()}),
             M6502Instruction(0xF2, "XF2", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xF3, "XF3", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
@@ -557,6 +565,19 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
         if (adjustFlags)
             setNumberFlags(num)
         return num
+    }
+
+    /** interpreter aid that takes result of condition check and branches accordingly adding cycles if
+     * branch taken and more cycles if page boundary crossed during branch
+      */
+    fun processBranch(check:Boolean, offset:Int) {
+        if (check) {
+            ++state.tick
+            val adjOff = if (offset > 127) -( (offset xor 255)+1) else offset
+            val target = state.ipNext + adjOff
+            pageBoundsCheck(state.ipNext, target)
+            state.ipNext = target
+        }
     }
 
     /** Create a dissaembly of the instruction that is located at a particular IP address

@@ -366,3 +366,48 @@ longDelayLoop:
 .ORG $110
 .BYTE 3 4
 ; expect M50=0, M51=1, M110=2, M111=3, X=15, Y=255, N=1
+
+
+; ************************************
+; *** BASIC BRANCHING INSTRUCTIONS ***
+; ************************************
+
+; BEQ test 
+LDY #1
+LDX #1
+BEQ done
+INY		; Make y 2 if reached which should be
+DEX
+BEQ done
+DEY		; Make y 1 (or 0) if reached which fails test!
+done: BRK
+; expect y = 2
+
+
+; BNE test 5 + 5 using iny and looping
+	LDX #5
+	LDY #5
+add: INY
+	DEX
+	BNE add
+	BRK
+	; expect y=10
+
+; BMI -> ABS(-16) the hard way
+	LDX #$F0	; two's complement value for -16
+	LDY #0
+add: INY
+	INX
+	BMI add		; repeat while X is negative
+	BRK
+	; expect y=16
+
+	
+; BPL - Count to 28 the hard way
+	LDX #100
+	LDY #0
+count: INY
+	INX
+	BPL count	; will count from 100 to 127, quit when 128 hit
+	BRK
+	; exect y=28
