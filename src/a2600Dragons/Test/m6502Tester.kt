@@ -531,7 +531,7 @@ class M6502Tests : MemoryManager {
 
         // * basic branching (BEQ,BNE,BPL,BMI) tests *
 
-        val verBBranch = true // verbose
+        val verBBranch = verbose
 
         // BEQ
         testResults = testResults and testAssemblySnippet("BEQ",
@@ -552,6 +552,50 @@ class M6502Tests : MemoryManager {
         testResults = testResults and testAssemblySnippet("BPL",
                 arrayListOf("LDX #100", "LDY #0", "count: INY", "INX", "BPL count", "BRK" ),
                 arrayListOf(Pair("Y", 28) ), verBBranch)
+
+        // * Arithmetic (adc and sbc) *
+
+        val verAdd = true // verbose
+
+        // ADC immediate with overflow
+        testResults = testResults and testAssemblySnippet("ADC immediate with overflow",
+                arrayListOf("CLD", "LDA #64", "CLC", "ADC #64", "BRK" ),
+                arrayListOf(Pair("A", 128), Pair("V", 1), Pair("N", 1), Pair("C", 0), Pair("Z", 0) ), verAdd)
+
+        // zero page using BCD
+        testResults = testResults and testAssemblySnippet("zero page using BCD",
+                arrayListOf("SED", "LDA #\$10", "CLC", "ADC 25", "BRK", ".ORG 25", ".BYTE $15"),
+                arrayListOf(Pair("A", 0x25), Pair("N", 0), Pair("C", 0), Pair("Z", 0) ), verAdd)
+
+        // Zero page,x with BCD and carry no carry result
+        testResults = testResults and testAssemblySnippet("Zero page,x with BCD and carry no carry result",
+                arrayListOf("SED", "LDA #\$10", "LDX #0", "SEC", "ADC 25,X", "BRK", ".ORG 25", ".BYTE $15"),
+                arrayListOf(Pair("A", 0x26), Pair("N", 0), Pair("C", 0), Pair("Z", 0) ), verAdd)
+
+        // absolute with carry resulting in carry result and zero
+        testResults = testResults and testAssemblySnippet("absolute with carry resulting in carry result and zero",
+                arrayListOf("CLD", "LDA #128", "SEC", "ADC 512", "BRK", ".ORG 512", ".BYTE 127"),
+                arrayListOf(Pair("A", 0), Pair("V", 0), Pair("N", 0), Pair("C", 1), Pair("Z", 1) ), verAdd)
+
+        // absolute,x overflow resulting in zero
+        testResults = testResults and testAssemblySnippet("absolute,x overflow resulting in zero",
+                arrayListOf("CLD", "LDX #2", "LDA #128", "CLC", "ADC 512,X", "BRK", ".ORG 512", ".BYTE 0 0 128"),
+                arrayListOf(Pair("A", 0), Pair("V", 1), Pair("N", 0), Pair("C", 1), Pair("Z", 1) ), verAdd)
+
+        // absolute,y normal add
+        testResults = testResults and testAssemblySnippet("absolute,y normal add",
+                arrayListOf("CLD", "LDY #0", "LDA #50", "CLC", "ADC 512,Y", "BRK", ".ORG 512", ".BYTE 25"),
+                arrayListOf(Pair("A", 75), Pair("V", 0), Pair("N", 0), Pair("C", 0), Pair("Z", 0) ), verAdd)
+
+        // (indirect, x) negative but normal add
+        testResults = testResults and testAssemblySnippet("(indirect, x) negative but normal add",
+                arrayListOf("CLD", "LDX #1", "LDA #255", "CLC", "ADC (25,X)", "BRK", ".ORG 26", ".WORD 512", ".ORG 512", ".BYTE 254"),
+                arrayListOf(Pair("A", 253), Pair("V", 0), Pair("N", 1), Pair("C", 1), Pair("Z", 0) ), verAdd)
+
+        // (indirect),y negative + positive (carry but no overflow)
+        testResults = testResults and testAssemblySnippet("(indirect),y negative + positive (carry but no overflow)",
+                arrayListOf("CLD", "LDY #1", "LDA #255", "CLC", "ADC (25),Y", "BRK", ".ORG 25", ".WORD 512", ".ORG 512", ".BYTE 0 127"),
+                arrayListOf(Pair("A", 126), Pair("V", 0), Pair("N", 0), Pair("C", 1), Pair("Z", 0) ), verAdd)
 
         return testResults
     }

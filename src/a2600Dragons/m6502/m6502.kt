@@ -197,41 +197,57 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             M6502Instruction(0x5F, "X5F", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
 
             M6502Instruction(0x60, "RTS",1, AddressMode.IMPLIED, 6, {m->m.notImplemented()}),
-            M6502Instruction(0x61, "ADC",2, AddressMode.INDIRECT_X, 6, {m->m.notImplemented()}),
+            M6502Instruction(0x61, "ADC",2, AddressMode.INDIRECT_X, 6, {_->
+                state.acc = performAdd(mem.read(findAbsoluteAddress(((mem.read(state.ip+1)+state.x) and 255)-1)), state.acc)
+            }),
             M6502Instruction(0x62, "X62", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x63, "X63", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x64, "X64", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0x65, "ADC",2, AddressMode.ZERO_PAGE, 3, {m->m.notImplemented()}),
+            M6502Instruction(0x65, "ADC",2, AddressMode.ZERO_PAGE, 3, {_->
+                state.acc = performAdd(mem.read(mem.read(state.ip+1)), state.acc)
+            }),
             M6502Instruction(0x66, "ROR",2, AddressMode.ZERO_PAGE, 5, {m->m.notImplemented()}),
             M6502Instruction(0x67, "X67", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x68, "PLA",1, AddressMode.IMPLIED, 4, {_->
                 state.acc = pullByteFromStack(true)
             }),
-            M6502Instruction(0x69, "ADC",2, AddressMode.IMMEDIATE, 2, {m->m.notImplemented()}),
+            M6502Instruction(0x69, "ADC",2, AddressMode.IMMEDIATE, 2, {_->
+                state.acc = performAdd(state.acc, mem.read(state.ip+1))
+            }),
             M6502Instruction(0x6A, "ROR",1, AddressMode.ACCUMULATOR, 2, {m->m.notImplemented()}),
             M6502Instruction(0x6B, "X6B", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x6C, "JMP",3, AddressMode.INDIRECT, 5, {m->m.notImplemented()}),
-            M6502Instruction(0x6D, "ADC",3, AddressMode.ABSOLUTE, 4, {m->m.notImplemented()}),
+            M6502Instruction(0x6D, "ADC",3, AddressMode.ABSOLUTE, 4, {_->
+                state.acc = performAdd(mem.read(findAbsoluteAddress(state.ip)), state.acc)
+            }),
             M6502Instruction(0x6E, "ROR",3, AddressMode.ABSOLUTE, 6, {m->m.notImplemented()}),
             M6502Instruction(0x6F, "X6F", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
 
             M6502Instruction(0x70, "BVS",2, AddressMode.RELATIVE, 2, {m->m.notImplemented()}),
-            M6502Instruction(0x71, "ADC",2, AddressMode.INDIRECT_Y, 5, {m->m.notImplemented()}),
+            M6502Instruction(0x71, "ADC",2, AddressMode.INDIRECT_Y, 5, {_->
+                state.acc = performAdd(mem.read(findAbsoluteAddress(mem.read(state.ip+1) -1) + state.y), state.acc)
+            }),
             M6502Instruction(0x72, "X72", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x73, "X73", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x74, "X74", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0x75, "ADC",2, AddressMode.ZERO_PAGE_X, 4, {m->m.notImplemented()}),
+            M6502Instruction(0x75, "ADC",2, AddressMode.ZERO_PAGE_X, 4, {_->
+                state.acc = performAdd(mem.read(mem.read(state.ip+1) + state.x), state.acc)
+            }),
             M6502Instruction(0x76, "ROR",2, AddressMode.ZERO_PAGE_X, 6, {m->m.notImplemented()}),
             M6502Instruction(0x77, "X77", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x78, "SEI",1, AddressMode.IMPLIED, 2, {m->
                 run {
                     m.state.flags = m.state.flags or INTERRUPT_FLAG
                 } }),
-            M6502Instruction(0x79, "ADC",3, AddressMode.ABSOLUTE_Y, 4, {m->m.notImplemented()}),
+            M6502Instruction(0x79, "ADC",3, AddressMode.ABSOLUTE_Y, 4, {_->
+                state.acc = performAdd(mem.read(findAbsoluteAddress(state.ip) + state.y), state.acc)
+            }),
             M6502Instruction(0x7A, "X7A", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x7B, "X7B", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x7C, "X7C", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0x7D, "ADC",3, AddressMode.ABSOLUTE_X, 4, {m->m.notImplemented()}),
+            M6502Instruction(0x7D, "ADC",3, AddressMode.ABSOLUTE_X, 4, {_->
+                state.acc = performAdd(mem.read(findAbsoluteAddress(state.ip)+state.x), state.acc)
+            }),
             M6502Instruction(0x7E, "ROR",3, AddressMode.ABSOLUTE_X, 7, {m->m.notImplemented()}),
             M6502Instruction(0x7F, "X7F", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
 
@@ -578,6 +594,43 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             pageBoundsCheck(state.ipNext, target)
             state.ipNext = target
         }
+    }
+
+    /** convert a binary coded decimal number into a proper binary number */
+    private fun BCDtoBinary(bcdNum:Int):Int {
+        val lowNibble = (bcdNum and 15) % 10
+        val highNibble = ((bcdNum ushr 4) and 15) % 10
+        return highNibble * 10 + lowNibble
+    }
+
+    /** converts a binary number into the equivalent Binary Coded Decimal (carry if > 99) */
+    private fun binaryToBCD(bin:Int):Int {
+        adjustFlag(CARRY_FLAG, bin > 99)
+        val lowNibble = bin % 10
+        val highNibble = (bin / 10) % 10
+        return (highNibble shl 4) or lowNibble
+    }
+
+    private fun performAdd(first:Int, second:Int, ignoreBCD:Boolean = false):Int {
+        if ( ( ! ignoreBCD ) and ((state.flags and DECIMAL_FLAG) == DECIMAL_FLAG) ) {
+            return binaryToBCD(performAdd(BCDtoBinary(first), BCDtoBinary(second), true))
+        }
+        // if we reach here we are now in binary mode
+        var addition = first + second
+        if ((state.flags and CARRY_FLAG) == CARRY_FLAG)
+            ++addition
+
+        // set nev state of carry flag
+        adjustFlag (CARRY_FLAG, addition > 255)
+        // zero and negative flags
+        addition = setNumberFlags(addition and 255)
+        // overflow flag is a bit of work
+        val firstNeg = (first and 128) == 128
+        val secondNeg = (second and 128) == 128
+        val resultNeg = (addition and 128) == 128
+        adjustFlag (OVERFLOW_FLAG, (firstNeg and secondNeg) xor resultNeg)
+
+        return addition
     }
 
     /** Create a dissaembly of the instruction that is located at a particular IP address

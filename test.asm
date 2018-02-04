@@ -411,3 +411,100 @@ count: INY
 	BPL count	; will count from 100 to 127, quit when 128 hit
 	BRK
 	; exect y=28
+	
+; ***************************
+; *** ADDING INSTRUCTIONS ***
+; ***************************
+
+; #immediate with overflow checked
+	CLD
+	LDA #64
+	CLC
+	ADC #64
+	BRK
+	;expect A=128, V=1, N=1 C=0, Z=0
+
+	
+; zero page using BCD
+	LDA #$10
+	SED
+	CLC
+	ADC 25
+	BRK
+.ORG 25
+.BYTE $15
+	;expect A=$25, N=0 C=0, Z=0	
+	
+	
+; Zero page,x with BCD and carry no carry result
+	LDA #$10
+	LDX #0
+	SED
+	SEC			; force carry
+	ADC 25,X
+	BRK
+.ORG 25
+.BYTE $15
+	;expect A=$26, N=0 C=0, Z=0	
+
+	
+; absolute with carry resulting in carry result and zero
+	CLD
+	LDA #128
+	SEC
+	ADC 512
+	BRK
+.ORG 512	
+.BYTE 128
+	;expect A=0 V=1, C=1, Z=1, N=0
+
+	
+; absolute,x overflow resulting in zero
+	CLD
+	LDX #2
+	LDA #128
+	CLC
+	ADC 512,X
+	BRK
+.ORG 512	
+.BYTE 0 0 128
+	; A=0, Z=1, C=1
+
+; absolute,y normal add
+	CLD
+	LDY #0
+	LDA #50
+	CLC
+	ADC 512,Y
+	BRK
+.ORG 512	
+.BYTE 25
+	; A = 75, V=0, C=0
+
+	
+; (indirect, x) negative but normal add
+	CLD
+	LDX #1
+	LDA #255
+	CLC
+	ADC (25,X)
+	BRK
+.ORG 26
+.WORD 512
+.ORG 512
+.BYTE 254
+	; A=253 V=0 C=1
+
+	
+; (indirect),y negative + positive (carry but no overflow)
+	CLD
+	LDY #1
+	LDA #255
+	CLC
+	ADC (25),1
+	BRK
+.ORG 25
+.WORD 512
+.ORG 512
+.BYTE 0 127
+	; a=126 v=0 c=1
