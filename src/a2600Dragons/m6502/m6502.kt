@@ -452,11 +452,14 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             M6502Instruction(0xDF, "XDF", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
 
             M6502Instruction(0xE0, "CPX",2, AddressMode.IMMEDIATE, 2, {m->m.notImplemented()}),
-            M6502Instruction(0xE1, "SBC",2, AddressMode.INDIRECT_X, 6, {m->m.notImplemented()}),
+            M6502Instruction(0xE1, "SBC",2, AddressMode.INDIRECT_X, 6, {_->
+                state.acc = performSubtract(state.acc, mem.read(findAbsoluteAddress(((mem.read(state.ip+1)+state.x) and 255)-1)))
+            }),
             M6502Instruction(0xE2, "XE2", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xE3, "XE3", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xE4, "CPX",2, AddressMode.ZERO_PAGE, 3, {m->m.notImplemented()}),
-            M6502Instruction(0xE5, "SBC",2, AddressMode.ZERO_PAGE, 3, {m->m.notImplemented()}),
+            M6502Instruction(0xE5, "SBC",2, AddressMode.ZERO_PAGE, 3, {_->
+                state.acc = performSubtract(state.acc, mem.read(mem.read(state.ip+1)))}),
             M6502Instruction(0xE6, "INC",2, AddressMode.ZERO_PAGE, 3, {_-> run {
                     val addressToInc = mem.read(state.ip+1)
                     mem.write(addressToInc, setNumberFlags((mem.read(addressToInc) + 1) and 255))
@@ -466,11 +469,15 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             M6502Instruction(0xE8, "INX",1, AddressMode.IMPLIED, 2, {_->
                 state.x = setNumberFlags((state.x+1) and 255)
             }),
-            M6502Instruction(0xE9, "SBC",2, AddressMode.IMMEDIATE, 2, {m->m.notImplemented()}),
+            M6502Instruction(0xE9, "SBC",2, AddressMode.IMMEDIATE, 2, {_->
+                state.acc = performSubtract(state.acc, mem.read(state.ip+1))
+            }),
             M6502Instruction(0xEA, "NOP",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
             M6502Instruction(0xEB, "XEB", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xEC, "CPX",3, AddressMode.ABSOLUTE, 4, {m->m.notImplemented()}),
-            M6502Instruction(0xED, "SBC",3, AddressMode.ABSOLUTE, 4, {m->m.notImplemented()}),
+            M6502Instruction(0xED, "SBC",3, AddressMode.ABSOLUTE, 4, {_->
+                state.acc = performSubtract(state.acc, mem.read(findAbsoluteAddress(state.ip)))
+            }),
             M6502Instruction(0xEE, "INC",3, AddressMode.ABSOLUTE, 4, {_-> run {
                 val addressToInc = findAbsoluteAddress(state.ip)
                 mem.write(addressToInc, setNumberFlags((mem.read(addressToInc) + 1) and 255))
@@ -480,11 +487,15 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             M6502Instruction(0xF0, "BEQ",2, AddressMode.RELATIVE, 2, {_->
                 processBranch(state.flags and ZERO_FLAG == ZERO_FLAG, mem.read(state.ip+1) )
             }),
-            M6502Instruction(0xF1, "SBC",2, AddressMode.INDIRECT_Y, 5, {m->m.notImplemented()}),
+            M6502Instruction(0xF1, "SBC",2, AddressMode.INDIRECT_Y, 5, {_->
+                state.acc = performSubtract(state.acc, mem.read(findAbsoluteAddress(mem.read(state.ip+1) -1) + state.y))
+            }),
             M6502Instruction(0xF2, "XF2", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xF3, "XF3", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xF4, "XF4", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0xF5, "SBC",2, AddressMode.ZERO_PAGE_X, 4, {m->m.notImplemented()}),
+            M6502Instruction(0xF5, "SBC",2, AddressMode.ZERO_PAGE_X, 4, {_->
+                state.acc = performSubtract(state.acc, mem.read(mem.read(state.ip+1) + state.x))
+            }),
             M6502Instruction(0xF6, "INC",2, AddressMode.ZERO_PAGE_X, 4, {_->run {
                 val addressToInc = mem.read(state.ip + 1) + state.x
                 mem.write(addressToInc, setNumberFlags((mem.read(addressToInc) + 1) and 255))
@@ -494,11 +505,15 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
                 run {
                     m.state.flags = m.state.flags or DECIMAL_FLAG
                 }}),
-            M6502Instruction(0xF9, "SBC",3, AddressMode.ABSOLUTE_Y, 4, {m->m.notImplemented()}),
+            M6502Instruction(0xF9, "SBC",3, AddressMode.ABSOLUTE_Y, 4, {_->
+                state.acc = performSubtract(state.acc, mem.read(findAbsoluteAddress(state.ip)+state.y))
+            }),
             M6502Instruction(0xFA, "XFA", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xFB, "XFB", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xFC, "XFC", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0xFD, "SBC",3, AddressMode.ABSOLUTE_X, 4, {m->m.notImplemented()}),
+            M6502Instruction(0xFD, "SBC",3, AddressMode.ABSOLUTE_X, 4, {_->
+                state.acc = performSubtract(state.acc, mem.read(findAbsoluteAddress(state.ip)+state.x))
+            }),
             M6502Instruction(0xFE, "INC",3, AddressMode.ABSOLUTE_X, 4, {_->run{
                 val addressToInc = findAbsoluteAddress(state.ip) + state.x
                 mem.write(addressToInc, setNumberFlags((mem.read(addressToInc) + 1) and 255))
@@ -624,13 +639,33 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
         adjustFlag (CARRY_FLAG, addition > 255)
         // zero and negative flags
         addition = setNumberFlags(addition and 255)
-        // overflow flag is a bit of work
+        // overflow flag
         val firstNeg = (first and 128) == 128
         val secondNeg = (second and 128) == 128
         val resultNeg = (addition and 128) == 128
-        adjustFlag (OVERFLOW_FLAG, (firstNeg and secondNeg) xor resultNeg)
+        if (firstNeg == secondNeg)
+            adjustFlag (OVERFLOW_FLAG, secondNeg xor resultNeg)
+        else
+            adjustFlag (OVERFLOW_FLAG, false)
 
         return addition
+    }
+
+    private fun performSubtract(first:Int, second:Int, ignoreBCD: Boolean = false):Int {
+        if ( ( ! ignoreBCD ) and ((state.flags and DECIMAL_FLAG) == DECIMAL_FLAG) ) {
+            if (first < second) {
+                val temp = binaryToBCD(performSubtract(BCDtoBinary(first)+100, BCDtoBinary(second), true))
+                adjustFlag(CARRY_FLAG, false)
+                return temp
+            } else {
+                val temp = binaryToBCD(performSubtract(BCDtoBinary(first), BCDtoBinary(second), true))
+                adjustFlag(CARRY_FLAG, true)
+                return temp
+            }
+        }
+
+        val sub =  performAdd(first, 255 xor second, true)
+        return sub
     }
 
     /** Create a dissaembly of the instruction that is located at a particular IP address

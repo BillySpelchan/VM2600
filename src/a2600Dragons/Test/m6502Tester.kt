@@ -529,6 +529,8 @@ class M6502Tests : MemoryManager {
                 arrayListOf(Pair("M50", 0), Pair("M51", 1), Pair("M110", 2), Pair("M111", 3), Pair("X", 15),
                         Pair("Y", 255), Pair("N", 1) ), verInc)
 
+        if ( ! testResults) { println("Failed INC/DEC tests!"); return false }
+
         // * basic branching (BEQ,BNE,BPL,BMI) tests *
 
         val verBBranch = verbose
@@ -553,9 +555,11 @@ class M6502Tests : MemoryManager {
                 arrayListOf("LDX #100", "LDY #0", "count: INY", "INX", "BPL count", "BRK" ),
                 arrayListOf(Pair("Y", 28) ), verBBranch)
 
+        if ( ! testResults) { println("Failed Basic Branching tests!"); return false }
+
         // * Arithmetic (adc and sbc) *
 
-        val verAdd = true // verbose
+        val verAdd = verbose
 
         // ADC immediate with overflow
         testResults = testResults and testAssemblySnippet("ADC immediate with overflow",
@@ -596,6 +600,57 @@ class M6502Tests : MemoryManager {
         testResults = testResults and testAssemblySnippet("(indirect),y negative + positive (carry but no overflow)",
                 arrayListOf("CLD", "LDY #1", "LDA #255", "CLC", "ADC (25),Y", "BRK", ".ORG 25", ".WORD 512", ".ORG 512", ".BYTE 0 127"),
                 arrayListOf(Pair("A", 126), Pair("V", 0), Pair("N", 0), Pair("C", 1), Pair("Z", 0) ), verAdd)
+
+        // ADC immediate mixed that shouldn't overflow
+        testResults = testResults and testAssemblySnippet("N+P shouldn't overflow",
+                arrayListOf("CLD", "LDA #128", "CLC", "ADC #127", "BRK" ),
+                arrayListOf(Pair("A", 255), Pair("V", 0) ), verAdd)
+
+        if ( ! testResults) { println("Failed ADC tests!"); return false }
+
+        // * Arithmetic (sbc) *
+
+        val verSub = true // verbose
+
+        // SBC immediate with underflow
+        testResults = testResults and testAssemblySnippet("SBC immediate with overflow",
+                arrayListOf("CLD", "LDA #64", "SEC", "SBC #191", "BRK" ),
+                arrayListOf(Pair("A", 129), Pair("V", 1), Pair("N", 1), Pair("C", 0), Pair("Z", 0) ), verSub)
+
+        // zero page using BCD
+        testResults = testResults and testAssemblySnippet("SBC zero page using BCD",
+                arrayListOf("SED", "LDA #\$15", "SEC", "SBC 25", "BRK", ".ORG 25", ".BYTE $10"),
+                arrayListOf(Pair("A", 0x05), Pair("N", 0), Pair("C", 1), Pair("Z", 0) ), verSub)
+
+        // Zero page,x with BCD and underflow
+        testResults = testResults and testAssemblySnippet("SVC Zero page,x with BCD and underflow",
+                arrayListOf("SED", "LDA #\$10", "LDX #0", "SEC", "SBC 25,X", "BRK", ".ORG 25", ".BYTE $95"),
+                arrayListOf(Pair("A", 0x15), Pair("N", 0), Pair("C", 0), Pair("Z", 0) ), verSub)
+
+        // sbc bsolute with no carry res zero
+        testResults = testResults and testAssemblySnippet("sbc bsolute with no carry res zero",
+                arrayListOf("CLD", "LDA #64", "CLC", "SBC 512", "BRK", ".ORG 512", ".BYTE 63"),
+                arrayListOf(Pair("A", 0), Pair("V", 0), Pair("N", 0), Pair("C", 1), Pair("Z", 1) ), verSub)
+
+        // absolute,x overflow (-128-1 = 127?)
+        testResults = testResults and testAssemblySnippet("sbc absolute,x overflow",
+                arrayListOf("CLD", "LDX #2", "LDA #128", "SEC", "SBC 512,X", "BRK", ".ORG 512", ".BYTE 0 0 1"),
+                arrayListOf(Pair("A", 127), Pair("V", 1), Pair("N", 0), Pair("C", 1), Pair("Z", 0) ), verSub)
+
+        // sbc absolute,y normal
+        testResults = testResults and testAssemblySnippet("sbc absolute,y normal",
+                arrayListOf("CLD", "LDY #0", "LDA #50", "SEC", "SBC 512,Y", "BRK", ".ORG 512", ".BYTE 25"),
+                arrayListOf(Pair("A", 25), Pair("V", 0), Pair("N", 0), Pair("C", 1), Pair("Z", 0) ), verSub)
+
+        // sbc (indirect, x) negative but normal
+        testResults = testResults and testAssemblySnippet("sbc (indirect, x) negative but normal",
+                arrayListOf("CLD", "LDX #1", "LDA #254", "SEC", "SBC (25,X)", "BRK", ".ORG 26", ".WORD 512", ".ORG 512", ".BYTE 255"),
+                arrayListOf(Pair("A", 255), Pair("V", 0), Pair("N", 1), Pair("C", 0), Pair("Z", 0) ), verSub)
+
+        // sbc (indirect),y negative - positive
+        testResults = testResults and testAssemblySnippet("SBC (indirect),y negative - positive",
+                arrayListOf("CLD", "LDY #1", "LDA #255", "SEC", "SBC (25),Y", "BRK", ".ORG 25", ".WORD 512", ".ORG 512", ".BYTE 0 2"),
+                arrayListOf(Pair("A", 253), Pair("V", 0), Pair("N", 1), Pair("C", 1), Pair("Z", 0) ), verSub)
 
         return testResults
     }

@@ -508,3 +508,103 @@ count: INY
 .ORG 512
 .BYTE 0 127
 	; a=126 v=0 c=1
+
+	
+; ********************************
+; *** SUBTRACTION INSTRUCTIONS ***
+; ********************************
+
+; SBC immediate with overflow
+	CLD
+	LDA #64
+	SEC
+	SBC #191
+	BRK
+	; Expect A=129, V=1, N=1, C=0, Z=0
+
+	
+; SBC zero page using BCD
+	SED
+	LDA #$15
+	SEC
+	SBC 25
+	BRK
+.ORG 25
+.BYTE $10
+	; expect A=$05, N=0, C=1, Z=0
+	
+
+;SVC Zero page,x with BCD and underflow
+	SED
+	LDA #$10
+	LDX #0
+	SEC
+	SBC 25,X
+	BRK
+.ORG 25
+.BYTE $95
+	; expect A=$15, N=0, C=0, Z=0
+
+	
+; sbc bsolute with no carry res zero
+	CLD
+	LDA #64
+	CLC
+	SBC 512
+	BRK
+.ORG 512
+.BYTE 63
+	; expect A=0, V=0, N=0, C=1,Z=1
+	
+	
+; absolute,x overflow (-128-1 = 127?)
+	CLD
+	LDX #2
+	LDA #128
+	SEC
+	SBC 512,X
+	BRK
+.ORG 512
+.BYTE 0 0 1
+	; A=127, V= 1, N= 0, C=1, Z=0
+
+
+; sbc absolute,y normal
+	CLD
+	LDY #0
+	LDA #50
+	SEC
+	SBC 512,Y
+	BRK
+.ORG 512
+.BYTE 25
+	; A=25, V=0, N=0, C=1, Z= 0
+	
+
+; sbc (indirect, x) negative but normal
+	CLD
+	LDX #1
+	LDA #254
+	SEC
+	SBC (25,X)
+	BRK
+.ORG 26
+.WORD 512
+.ORG 512
+.BYTE 255
+	; A=255, V=0, N=1, C=0, Z=0
+	
+
+; sbc (indirect),y negative - positive
+    CLD
+	LDY #1
+	LDA #255
+	SEC
+	SBC (25),Y
+	BRK
+.ORG 25
+.WORD 512
+.ORG 512
+.BYTE 0 2
+    ; A=253, V=0, N=1, C=1, Z=0
+	
