@@ -610,7 +610,7 @@ class M6502Tests : MemoryManager {
 
         // * Arithmetic (sbc) *
 
-        val verSub = true // verbose
+        val verSub = verbose
 
         // SBC immediate with underflow
         testResults = testResults and testAssemblySnippet("SBC immediate with overflow",
@@ -651,6 +651,33 @@ class M6502Tests : MemoryManager {
         testResults = testResults and testAssemblySnippet("SBC (indirect),y negative - positive",
                 arrayListOf("CLD", "LDY #1", "LDA #255", "SEC", "SBC (25),Y", "BRK", ".ORG 25", ".WORD 512", ".ORG 512", ".BYTE 0 2"),
                 arrayListOf(Pair("A", 253), Pair("V", 0), Pair("N", 1), Pair("C", 1), Pair("Z", 0) ), verSub)
+
+        if ( ! testResults) { println("Failed SBC tests!"); return false }
+
+        // * Arithmetic (sbc) *
+
+        val verMFlag = true // verbose
+
+        // BCC test by counting times can add 10 before wrapping
+        testResults = testResults and testAssemblySnippet("BCC",
+                arrayListOf("CLD", "LDA #0", "TAX", "count: INX", "CLC", "ADC #10", "BCC count", "BRK" ),
+                arrayListOf(Pair("A", 4), Pair("X", 26), Pair("V", 0), Pair("N", 0), Pair("C", 1), Pair("Z", 0) ), verMFlag)
+
+        // BCS count how many times can subtract 10 before wrapping
+        testResults = testResults and testAssemblySnippet("BCS",
+                arrayListOf("CLD", "LDA #255", "LDX #0", "count: INX", "SEC", "SBC #10", "BCS count", "BRK" ),
+                arrayListOf(Pair("A", 251), Pair("X", 26), Pair("V", 0), Pair("N", 1), Pair("C", 0), Pair("Z", 0) ), verMFlag)
+
+        // BVC count how many times can add 10 until become negative
+        testResults = testResults and testAssemblySnippet("BVC",
+                arrayListOf("CLD", "LDA #0", "TAX", "count: INX", "CLC", "ADC #10", "BVC count", "BRK" ),
+                arrayListOf(Pair("A", 130), Pair("X", 13), Pair("V", 1), Pair("N", 1), Pair("C", 0), Pair("Z", 0) ), verMFlag)
+
+        // BVS Test
+        testResults = testResults and testAssemblySnippet("BVS",
+                arrayListOf("CLD", "LDA #64", "LDX #0", "CLC", "ADC #32", "BVS done", "INX", "CLC", "ADC #32",
+                        "BVS done", "INX", "done: BRK"  ),
+                arrayListOf(Pair("A", 128), Pair("X", 1), Pair("V", 1), Pair("N", 1), Pair("C", 0), Pair("Z", 0) ), verMFlag)
 
         return testResults
     }

@@ -176,7 +176,9 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             M6502Instruction(0x4E, "LSR",3, AddressMode.ABSOLUTE, 6, {m->m.notImplemented()}),
             M6502Instruction(0x4F, "X42", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
 
-            M6502Instruction(0x50, "BVC",2, AddressMode.RELATIVE, 2, {m->m.notImplemented()}),
+            M6502Instruction(0x50, "BVC",2, AddressMode.RELATIVE, 2, {_->
+                processBranch(state.flags and OVERFLOW_FLAG != OVERFLOW_FLAG, mem.read(state.ip+1) )
+            }),
             M6502Instruction(0x51, "EOR",2, AddressMode.INDIRECT_Y, 5, {m->m.notImplemented()}),
             M6502Instruction(0x52, "X52", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x53, "X53", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
@@ -223,7 +225,9 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             M6502Instruction(0x6E, "ROR",3, AddressMode.ABSOLUTE, 6, {m->m.notImplemented()}),
             M6502Instruction(0x6F, "X6F", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
 
-            M6502Instruction(0x70, "BVS",2, AddressMode.RELATIVE, 2, {m->m.notImplemented()}),
+            M6502Instruction(0x70, "BVS",2, AddressMode.RELATIVE, 2, {_->
+                processBranch(state.flags and OVERFLOW_FLAG == OVERFLOW_FLAG, mem.read(state.ip+1) )
+            }),
             M6502Instruction(0x71, "ADC",2, AddressMode.INDIRECT_Y, 5, {_->
                 state.acc = performAdd(mem.read(findAbsoluteAddress(mem.read(state.ip+1) -1) + state.y), state.acc)
             }),
@@ -284,7 +288,9 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             }),
             M6502Instruction(0x8F, "X8F", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
 
-            M6502Instruction(0x90, "BCC",2, AddressMode.RELATIVE, 2, {m->m.notImplemented()}),
+            M6502Instruction(0x90, "BCC",2, AddressMode.RELATIVE, 2, {_->
+                processBranch(state.flags and CARRY_FLAG != CARRY_FLAG, mem.read(state.ip+1) )
+            }),
             M6502Instruction(0x91, "STA",2, AddressMode.INDIRECT_Y, 6, {_->
                 mem.write(findAbsoluteAddress(mem.read(state.ip+1) -1) + state.y, state.acc) }),
             M6502Instruction(0x92, "X92", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
@@ -356,7 +362,9 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             } }),
             M6502Instruction(0xAF, "XAF", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
 
-            M6502Instruction(0xB0, "BCS",2, AddressMode.RELATIVE, 2, {m->m.notImplemented()}),
+            M6502Instruction(0xB0, "BCS",2, AddressMode.RELATIVE, 2, {_->
+                processBranch(state.flags and CARRY_FLAG == CARRY_FLAG, mem.read(state.ip+1) )
+            }),
             M6502Instruction(0xB1, "LDA",2, AddressMode.INDIRECT_Y, 5, {m->
                 m.state.acc = m.loadByteFromAddress(m.findAbsoluteAddress(
                         // need to deduct 1 from loadByteFromAddress method as it is designed to skip opcode

@@ -608,3 +608,57 @@ count: INY
 .BYTE 0 2
     ; A=253, V=0, N=1, C=1, Z=0
 	
+
+; *******************************************	
+; *** Math Branching Instructions testing ***
+; *******************************************
+
+; BCC test by counting times can add 10 before wrapping
+	CLD
+	LDA #0
+	TAX
+count: INX
+	CLC
+	ADC #10
+	BCC count
+	BRK
+	; expect A = 6, X=26, C=1
+	
+	
+; BCS count how many times can subtract 10 before wrapping
+	CLD
+	LDA #255
+	LDX #0
+count:	INX
+	SEC
+	SBC #10
+	BCS count
+	BRK;
+	; expect A 251, X26, C=0
+	
+	
+; BVC count how many times can add 10 until become negative
+	CLD
+	LDA #0
+	TAX
+count:	INX
+	CLC
+	ADC #10
+	BVC count
+	BRK;
+	; expect A 130, X13, C=0, V=1
+	
+; BVS test
+	CLD
+	LDA #64
+	LDX #0
+	CLC
+	ADC #32
+	BVS done
+	INX
+	CLC
+	ADC #32
+	BVS done
+	INX
+done: BRK
+	; expect A=128, X=1, V=1
