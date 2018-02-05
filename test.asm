@@ -777,3 +777,89 @@ loop: INY
 .ORG 512
 .BYTE 1 2 3 4 5 
 	; expect A=3, X=2, Z=1, N=0, C=1
+
+	
+; CPX Immediate - compute 3x20 the hard way
+	CLD
+	LDA #0
+	TAX
+loop:	INX
+	CLC
+	ADC #3
+	CPX #20
+	BNE loop
+	BRK
+	; expect x=20,a=60,z=1
+	
+	
+; CPX Zero Page - compute 5x5 the hard way
+	CLD
+	LDA #0
+	TAX
+loop:	INX
+	CLC
+	ADC #5
+	CPX 200
+	BCC loop
+	BRK
+.ORG 200
+.BYTE 5
+	; expect x=5,a=25,c=1
+
+	
+; CPX Absolute - Compute 6x7 the hard way
+	CLD
+	LDA #0
+	TAX
+loop:	INX
+	CLC
+	ADC #7
+	CPX 520
+	BMI loop
+	BRK
+.ORG 520
+.BYTE 6
+	; expect x=6,a=42,n=0
+ 
+ 
+; CPY Immediate - compute 3x20 the hard way
+	CLD
+	LDA #0
+	TAY
+loop:	INY
+	CLC
+	ADC #3
+	CPY #20
+	BNE loop
+	BRK
+	; expect y=20,a=60,z=1
+	
+	
+; CPY Zero Page - compute 5x5 the hard way
+	CLD
+	LDA #0
+	TAY
+loop:	INY
+	CLC
+	ADC #5
+	CPY 200
+	BCC loop
+	BRK
+.ORG 200
+.BYTE 5
+	; expect Y=5,a=25,c=1
+
+	
+; CPY Absolute - Compute 6x7 the hard way
+	CLD
+	LDA #0
+	TAY
+loop:	INY
+	CLC
+	ADC #7
+	CPY 520
+	BMI loop
+	BRK
+.ORG 520
+.BYTE 6
+	; expect y=6,a=42,n=0

@@ -733,6 +733,40 @@ class M6502Tests : MemoryManager {
                         ".ORG 200", ".WORD 512", ".ORG 512", ".BYTE 1 2 3 4 5"),
                 arrayListOf(Pair("A", 3), Pair("Y", 2), Pair("Z", 1) , Pair("N", 0), Pair("C", 1)), verCompare)
 
+        // CPX Immediate - compute 3x20 the hard way
+        testResults = testResults and testAssemblySnippet("CPX Immediate",
+                arrayListOf("CLD", "LDA #0", "TAX", "loop: INX", "CLC", "ADC #3", "CPX #20", "BNE loop", "BRK"  ),
+                arrayListOf(Pair("A", 60), Pair("X", 20), Pair("Z", 1) , Pair("N", 0), Pair("C", 1)), verCompare)
+
+        // CPX Zero Page - compute 5x5 the hard way
+        testResults = testResults and testAssemblySnippet("CPX Zero Page",
+                arrayListOf("CLD", "LDA #0", "TAX", "loop: INX", "CLC", "ADC #5", "CPX 200", "BNE loop", "BRK",
+                        ".ORG 200", ".BYTE 5"),
+                arrayListOf(Pair("A", 25), Pair("X", 5), Pair("Z", 1) , Pair("N", 0), Pair("C", 1)), verCompare)
+
+        // CPX Absolute - Compute 6x7 the hard way
+        testResults = testResults and testAssemblySnippet("CPX Absolute",
+                arrayListOf("CLD", "LDA #0", "TAX", "loop: INX", "CLC", "ADC #7", "CPX 520", "BNE loop", "BRK",
+                        ".ORG 520", ".BYTE 6"),
+                arrayListOf(Pair("A", 42), Pair("X", 6), Pair("Z", 1) , Pair("N", 0), Pair("C", 1)), verCompare)
+
+        // CPY Immediate - compute 3x20 the hard way
+        testResults = testResults and testAssemblySnippet("CPY Immediate",
+                arrayListOf("CLD", "LDA #0", "TAY", "loop: INY", "CLC", "ADC #3", "CPY #20", "BNE loop", "BRK"  ),
+                arrayListOf(Pair("A", 60), Pair("Y", 20), Pair("Z", 1) , Pair("N", 0), Pair("C", 1)), verCompare)
+
+        // CPY Zero Page - compute 5x5 the hard way
+        testResults = testResults and testAssemblySnippet("CPY Zero Page",
+                arrayListOf("CLD", "LDA #0", "TAY", "loop: INY", "CLC", "ADC #5", "CPY 200", "BNE loop", "BRK",
+                        ".ORG 200", ".BYTE 5"),
+                arrayListOf(Pair("A", 25), Pair("Y", 5), Pair("Z", 1) , Pair("N", 0), Pair("C", 1)), verCompare)
+
+        // CPY Absolute - Compute 6x7 the hard way
+        testResults = testResults and testAssemblySnippet("CPY Absolute",
+                arrayListOf("CLD", "LDA #0", "TAY", "loop: INY", "CLC", "ADC #7", "CPY 520", "BNE loop", "BRK",
+                        ".ORG 520", ".BYTE 6"),
+                arrayListOf(Pair("A", 42), Pair("Y", 6), Pair("Z", 1) , Pair("N", 0), Pair("C", 1)), verCompare)
+
         return testResults
     }
 

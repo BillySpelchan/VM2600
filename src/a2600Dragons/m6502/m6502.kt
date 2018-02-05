@@ -404,13 +404,17 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             }}),
             M6502Instruction(0xBF, "XBF", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
 
-            M6502Instruction(0xC0, "CPY",2, AddressMode.IMMEDIATE, 2, {m->m.notImplemented()}),
+            M6502Instruction(0xC0, "CPY",2, AddressMode.IMMEDIATE, 2, {_->
+                performCompare(state.y, mem.read(state.ip+1))
+            }),
             M6502Instruction(0xC1, "CMP",2, AddressMode.INDIRECT_X, 6, {_->
                 performCompare(state.acc, mem.read(findAbsoluteAddress(((mem.read(state.ip+1)+state.x) and 255)-1)))
             }),
             M6502Instruction(0xC2, "XC2", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xC3, "XC3", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0xC4, "CPY",2, AddressMode.ZERO_PAGE, 3, {m->m.notImplemented()}),
+            M6502Instruction(0xC4, "CPY",2, AddressMode.ZERO_PAGE, 3, {_->
+                performCompare(state.y, mem.read(mem.read(state.ip+1)))
+            }),
             M6502Instruction(0xC5, "CMP",2, AddressMode.ZERO_PAGE, 3, {_->
                 performCompare(state.acc, mem.read(mem.read(state.ip+1)))
             }),
@@ -429,7 +433,9 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
                 state.x = setNumberFlags((state.x-1) and 255)
             }),
             M6502Instruction(0xCB, "XCB", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0xCC, "CPY",3, AddressMode.ABSOLUTE, 4, {m->m.notImplemented()}),
+            M6502Instruction(0xCC, "CPY",3, AddressMode.ABSOLUTE, 4, {_->
+                performCompare(state.y, mem.read(findAbsoluteAddress(state.ip)))
+            }),
             M6502Instruction(0xCD, "CMP",3, AddressMode.ABSOLUTE, 4, {_->
                 performCompare(state.acc, mem.read(findAbsoluteAddress(state.ip)))
             }),
@@ -475,13 +481,17 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             }}),
             M6502Instruction(0xDF, "XDF", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
 
-            M6502Instruction(0xE0, "CPX",2, AddressMode.IMMEDIATE, 2, {m->m.notImplemented()}),
+            M6502Instruction(0xE0, "CPX",2, AddressMode.IMMEDIATE, 2, {_->
+                performCompare(state.x, mem.read(state.ip+1))
+            }),
             M6502Instruction(0xE1, "SBC",2, AddressMode.INDIRECT_X, 6, {_->
                 state.acc = performSubtract(state.acc, mem.read(findAbsoluteAddress(((mem.read(state.ip+1)+state.x) and 255)-1)))
             }),
             M6502Instruction(0xE2, "XE2", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xE3, "XE3", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0xE4, "CPX",2, AddressMode.ZERO_PAGE, 3, {m->m.notImplemented()}),
+            M6502Instruction(0xE4, "CPX",2, AddressMode.ZERO_PAGE, 3, {_->
+                performCompare(state.x, mem.read(mem.read(state.ip+1)))
+            }),
             M6502Instruction(0xE5, "SBC",2, AddressMode.ZERO_PAGE, 3, {_->
                 state.acc = performSubtract(state.acc, mem.read(mem.read(state.ip+1)))}),
             M6502Instruction(0xE6, "INC",2, AddressMode.ZERO_PAGE, 3, {_-> run {
@@ -498,7 +508,9 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             }),
             M6502Instruction(0xEA, "NOP",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
             M6502Instruction(0xEB, "XEB", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0xEC, "CPX",3, AddressMode.ABSOLUTE, 4, {m->m.notImplemented()}),
+            M6502Instruction(0xEC, "CPX",3, AddressMode.ABSOLUTE, 4, {_->
+                performCompare(state.x, mem.read(findAbsoluteAddress(state.ip)))
+            }),
             M6502Instruction(0xED, "SBC",3, AddressMode.ABSOLUTE, 4, {_->
                 state.acc = performSubtract(state.acc, mem.read(findAbsoluteAddress(state.ip)))
             }),
