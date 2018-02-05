@@ -405,11 +405,15 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             M6502Instruction(0xBF, "XBF", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
 
             M6502Instruction(0xC0, "CPY",2, AddressMode.IMMEDIATE, 2, {m->m.notImplemented()}),
-            M6502Instruction(0xC1, "CMP",2, AddressMode.INDIRECT_X, 6, {m->m.notImplemented()}),
+            M6502Instruction(0xC1, "CMP",2, AddressMode.INDIRECT_X, 6, {_->
+                performCompare(state.acc, mem.read(findAbsoluteAddress(((mem.read(state.ip+1)+state.x) and 255)-1)))
+            }),
             M6502Instruction(0xC2, "XC2", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xC3, "XC3", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xC4, "CPY",2, AddressMode.ZERO_PAGE, 3, {m->m.notImplemented()}),
-            M6502Instruction(0xC5, "CMP",2, AddressMode.ZERO_PAGE, 3, {m->m.notImplemented()}),
+            M6502Instruction(0xC5, "CMP",2, AddressMode.ZERO_PAGE, 3, {_->
+                performCompare(state.acc, mem.read(mem.read(state.ip+1)))
+            }),
             M6502Instruction(0xC6, "DEC",2, AddressMode.ZERO_PAGE, 3, {_-> run {
                 val addressToDec = mem.read(state.ip+1)
                 mem.write(addressToDec, setNumberFlags((mem.read(addressToDec) - 1) and 255))
@@ -418,13 +422,17 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             M6502Instruction(0xC8, "INY",1, AddressMode.IMPLIED, 2, {_->
                 state.y = setNumberFlags((state.y+1) and 255)
             }),
-            M6502Instruction(0xC9, "CMP",2, AddressMode.IMMEDIATE, 2, {m->m.notImplemented()}),
+            M6502Instruction(0xC9, "CMP",2, AddressMode.IMMEDIATE, 2, {_->
+                performCompare(state.acc, mem.read(state.ip+1))
+            }),
             M6502Instruction(0xCA, "DEX",1, AddressMode.IMPLIED, 2, {m->
                 state.x = setNumberFlags((state.x-1) and 255)
             }),
             M6502Instruction(0xCB, "XCB", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xCC, "CPY",3, AddressMode.ABSOLUTE, 4, {m->m.notImplemented()}),
-            M6502Instruction(0xCD, "CMP",3, AddressMode.ABSOLUTE, 4, {m->m.notImplemented()}),
+            M6502Instruction(0xCD, "CMP",3, AddressMode.ABSOLUTE, 4, {_->
+                performCompare(state.acc, mem.read(findAbsoluteAddress(state.ip)))
+            }),
             M6502Instruction(0xCE, "DEC",3, AddressMode.ABSOLUTE, 4, {_->run{
                 val addressToDec = findAbsoluteAddress(state.ip)
                 mem.write(addressToDec, setNumberFlags((mem.read(addressToDec) - 1) and 255))
@@ -434,11 +442,15 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             M6502Instruction(0xD0, "BNE",2, AddressMode.RELATIVE, 2, {_->
                 processBranch(state.flags and ZERO_FLAG != ZERO_FLAG, mem.read(state.ip+1) )
             }),
-            M6502Instruction(0xD1, "CMP",2, AddressMode.INDIRECT_Y, 5, {m->m.notImplemented()}),
+            M6502Instruction(0xD1, "CMP",2, AddressMode.INDIRECT_Y, 5, {_->
+                performCompare(state.acc, mem.read(findAbsoluteAddress(mem.read(state.ip+1) -1) + state.y))
+            }),
             M6502Instruction(0xD2, "XD2", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xD3, "XD3", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xD4, "XD4", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0xD5, "CMP",2, AddressMode.ZERO_PAGE_X, 4, {m->m.notImplemented()}),
+            M6502Instruction(0xD5, "CMP",2, AddressMode.ZERO_PAGE_X, 4, {_->
+                performCompare(state.acc, mem.read(mem.read(state.ip+1) + state.x))
+            }),
             M6502Instruction(0xD6, "DEC",2, AddressMode.ZERO_PAGE_X, 4, {_->run {
                 val addressToDec = mem.read(state.ip+1) + state.x
                 mem.write(addressToDec, setNumberFlags((mem.read(addressToDec) - 1) and 255))
@@ -448,11 +460,15 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
                 run {
                     m.state.flags = m.state.flags and (255 xor DECIMAL_FLAG)
                 }}),
-            M6502Instruction(0xD9, "CMP",3, AddressMode.ABSOLUTE_Y, 4, {m->m.notImplemented()}),
+            M6502Instruction(0xD9, "CMP",3, AddressMode.ABSOLUTE_Y, 4, {_->
+                performCompare(state.acc, mem.read(findAbsoluteAddress(state.ip)+state.y))
+            }),
             M6502Instruction(0xDA, "XDA", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xDB, "XDB", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xDC, "XDC", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0xDD, "CMP",3, AddressMode.ABSOLUTE_X, 4, {m->m.notImplemented()}),
+            M6502Instruction(0xDD, "CMP",3, AddressMode.ABSOLUTE_X, 4, {_->
+                performCompare(state.acc, mem.read(findAbsoluteAddress(state.ip)+state.x))
+            }),
             M6502Instruction(0xDE, "DEC",3, AddressMode.ABSOLUTE_X, 4, {_->run{
                 val addressToDec = findAbsoluteAddress(state.ip) + state.x
                 mem.write(addressToDec, setNumberFlags((mem.read(addressToDec) - 1) and 255))
@@ -674,6 +690,12 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
 
         val sub =  performAdd(first, 255 xor second, true)
         return sub
+    }
+
+    private fun performCompare(first:Int, second:Int) {
+        val sub = first - second
+        setNumberFlags(sub)
+        adjustFlag(CARRY_FLAG, (state.flags and NEGATIVE_FLAG) == 0 )
     }
 
     /** Create a dissaembly of the instruction that is located at a particular IP address

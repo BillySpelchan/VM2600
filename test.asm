@@ -662,3 +662,118 @@ count:	INX
 	INX
 done: BRK
 	; expect A=128, X=1, V=1
+
+	
+; ************************************	
+; *** COMPARE Instructions testing ***
+; ************************************
+	
+; CMP Immediate 
+	CLD
+	LDA #0
+	TAX
+loop:	INX
+	CLC
+	ADC #2
+	CMP #20
+	BNE loop
+	BRK
+	; expect x=10,a=20,z=1
+	
+	
+; CMP Zero Page
+	CLD
+	LDA #0
+	TAX
+loop:	INX
+	CLC
+	ADC #2
+	CMP 200
+	BMI loop
+	BRK
+.ORG 200
+.BYTE 20
+	; expect x=10,a=20,z=1
+
+	
+; CMP Zero Page,X
+	CLD
+	LDA #0
+	TAY
+	LDX #10
+loop:	INY
+	CLC
+	ADC #2
+	CMP 190,X
+	BCC loop
+	BRK
+.ORG 200
+.BYTE 20
+	; expect x=10,a=20,z=1
+
+
+; CMP Absolute
+	CLD
+	LDA #0
+	TAX
+loop:	INX
+	CLC
+	ADC #2
+	CMP 512
+	BMI loop
+	BRK
+.ORG 512
+.BYTE 20
+	; expect x=10,a=20,z=1
+
+	
+; CMP Absolute,X find 4 index
+	LDA #4
+	LDX #255
+loop: INX
+	CMP 512,X
+	BNE loop
+	BRK
+.ORG 512
+.BYTE 1 2 3 4 
+	; expect A=4, X=3, Z=1, N=0, C=1
+
+
+; CMP Absolute,Y
+	LDA #5
+	LDY #255
+loop: INY
+	CMP 512,Y
+	BNE loop
+	BRK
+.ORG 512
+.BYTE 1 2 3 4 5 
+	; expect A=5, X=4, Z=1, N=0, C=1
+
+
+; CMP (Indirect,X)
+	LDA #69
+	LDX #2
+	LDY #0
+	CMP (200,X)
+	BEQ done
+	LDY 512
+done: BRK	
+.ORG 200
+.WORD 0 512
+.ORG 512
+.BYTE 42
+	; Expect A=69,Y=42
+	
+; CMP (Indirect),Y
+	LDA #3
+	LDY #255
+loop: INY
+	CMP (200),Y
+	BNE loop
+	BRK
+.ORG 200
+.WORD 512
+.ORG 512
+.BYTE 1 2 3 4 5 
+	; expect A=3, X=2, Z=1, N=0, C=1

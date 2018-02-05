@@ -679,6 +679,60 @@ class M6502Tests : MemoryManager {
                         "BVS done", "INX", "done: BRK"  ),
                 arrayListOf(Pair("A", 128), Pair("X", 1), Pair("V", 1), Pair("N", 1), Pair("C", 0), Pair("Z", 0) ), verMFlag)
 
+
+        if ( ! testResults) { println("Failed Math Branching tests!"); return false }
+
+        // * Comparison tests *
+
+        val verCompare = true // verbose
+
+        // CMP Immediate
+        testResults = testResults and testAssemblySnippet("CMP Immediate",
+                arrayListOf("CLD", "LDA #0", "TAX", "loop: INX", "CLC", "ADC #2", "CMP #20", "BNE loop", "BRK"  ),
+                arrayListOf(Pair("A", 20), Pair("X", 10), Pair("Z", 1) , Pair("N", 0), Pair("C", 1)), verCompare)
+
+        // CMP Zero Page
+        testResults = testResults and testAssemblySnippet("CMP Zero Page",
+                arrayListOf("CLD", "LDA #0", "TAX", "loop: INX", "CLC", "ADC #2", "CMP 200", "BNE loop", "BRK",
+                        ".ORG 200", ".BYTE 20"),
+                arrayListOf(Pair("A", 20), Pair("X", 10), Pair("Z", 1) , Pair("N", 0), Pair("C", 1)), verCompare)
+
+        // CMP Zero Page,X
+        testResults = testResults and testAssemblySnippet("CMP Zero Page,X",
+                arrayListOf("CLD", "LDA #0", "TAY", "LDX #10", "loop: INY", "CLC", "ADC #2", "CMP 190,X", "BCC loop", "BRK",
+                        ".ORG 200", ".BYTE 20"),
+                arrayListOf(Pair("A", 20), Pair("Y", 10), Pair("X", 10), Pair("Z", 1) , Pair("N", 0), Pair("C", 1)), verCompare)
+
+        // CMP Absolute
+        testResults = testResults and testAssemblySnippet("CMP Absolute",
+                arrayListOf("CLD", "LDA #0", "TAX", "loop: INX", "CLC", "ADC #2", "CMP 512", "BNE loop", "BRK",
+                        ".ORG 512", ".BYTE 20"),
+                arrayListOf(Pair("A", 20), Pair("X", 10), Pair("Z", 1) , Pair("N", 0), Pair("C", 1)), verCompare)
+
+        // CMP Absolute,X find 4 index
+        testResults = testResults and testAssemblySnippet("CMP Absolute,X",
+                arrayListOf("LDA #4", "LDX #255", "loop: INX", "CMP 512,X", "BNE loop", "BRK",
+                        ".ORG 512", ".BYTE 1 2 3 4 5"),
+                arrayListOf(Pair("A", 4), Pair("X", 3), Pair("Z", 1) , Pair("N", 0), Pair("C", 1)), verCompare)
+
+        // CMP Absolute,y find 5 index
+        testResults = testResults and testAssemblySnippet("CMP Absolute,Y",
+                arrayListOf("LDA #5", "LDY #255", "loop: INY", "CMP 512,Y", "BNE loop", "BRK",
+                        ".ORG 512", ".BYTE 1 2 3 4 5"),
+                arrayListOf(Pair("A", 5), Pair("Y", 4), Pair("Z", 1) , Pair("N", 0), Pair("C", 1)), verCompare)
+
+        // CMP (indirect,x)
+        testResults = testResults and testAssemblySnippet("CMP (indirect,x)",
+                arrayListOf("LDA #69", "LDX #2", "LDY #0", "CMP (200,X)", "BEQ done", "LDY 512", "done: BRK",
+                        ".ORG 200", ".WORD 0 512", ".ORG 512", ".BYTE 42"),
+                arrayListOf(Pair("A", 69), Pair("Y", 42), Pair("Z", 0) ), verCompare)
+
+        // CMP (indirect),y
+        testResults = testResults and testAssemblySnippet("CMP (indirect),y",
+                arrayListOf("LDA #3", "LDY #255", "loop: INY", "CMP (200),Y", "BNE loop", "BRK",
+                        ".ORG 200", ".WORD 512", ".ORG 512", ".BYTE 1 2 3 4 5"),
+                arrayListOf(Pair("A", 3), Pair("Y", 2), Pair("Z", 1) , Pair("N", 0), Pair("C", 1)), verCompare)
+
         return testResults
     }
 
