@@ -767,6 +767,28 @@ class M6502Tests : MemoryManager {
                         ".ORG 520", ".BYTE 6"),
                 arrayListOf(Pair("A", 42), Pair("Y", 6), Pair("Z", 1) , Pair("N", 0), Pair("C", 1)), verCompare)
 
+        if ( ! testResults) { println("Failed Comparison tests!"); return false }
+
+        // * Jumping and Subroutine tests *
+
+        val verJump = true // verbose
+
+        // JMP (both direct and indirect)
+        testResults = testResults and testAssemblySnippet("JMP (both)",
+                arrayListOf("JMP 512", "BRK",".ORG 512", "JMP (768)", "BRK", ".ORG 768", ".WORD 1970",
+                        ".ORG 1970", "LDA #42","BRK"  ),
+                arrayListOf(Pair("A", 42)), verJump)
+
+        // JSR - Multipy 4x4 the hard and ineffiecent way
+        testResults = testResults and testAssemblySnippet("JSR/RTS",
+                arrayListOf("CLD", "LDA #0", "TAY", "loop:	INY", "JSR add4", "CPY 520", "BMI loop",
+                        "BRK", ".ORG 520", ".BYTE 4", "add4: CLC", "ADC #4", "RTS"  ),
+                arrayListOf(Pair("A", 16)), verJump)
+
+        /*
+	"CLD", "LDA #0", "TAY", "loop:	INY", "JSR add7", "CPY 520", "BMI loop",
+	"BRK", ".ORG 520", ".BYTE 6", "add7: CLC", "ADC #7", "RTS"
+	        */
         return testResults
     }
 

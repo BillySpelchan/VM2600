@@ -863,3 +863,41 @@ loop:	INY
 .ORG 520
 .BYTE 6
 	; expect y=6,a=42,n=0
+
+	
+	
+; ***************************************	
+; *** Jumping and subroutines testing ***
+; ***************************************
+
+; JMP (both direct and indirect)
+	JMP 512
+	BRK
+.ORG 512
+	JMP (768)
+	BRK
+.ORG 768
+	.WORD 1970
+.ORG 1970
+	LDA #42
+	BRK
+	; expect 
+
+	
+; JSR - Multipy 4x4 the hard and ineffiecent way
+	CLD
+	LDA #0
+	TAY
+loop:	INY
+	JSR add4
+	CPY 520
+	BMI loop
+	BRK
+.ORG 520
+.BYTE 4
+add4: CLC
+	ADC #4
+	RTS
+	; expect a 16
+	
+	

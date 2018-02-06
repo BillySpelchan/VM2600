@@ -115,7 +115,11 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             M6502Instruction(0x1E, "ASL",3, AddressMode.ABSOLUTE_X, 7, {m->m.notImplemented()}),
             M6502Instruction(0x1F, "X1F", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
 
-            M6502Instruction(0x20, "JSR",3, AddressMode.ABSOLUTE, 6, {m->m.notImplemented()}),
+            M6502Instruction(0x20, "JSR",3, AddressMode.ABSOLUTE, 6, {_->run {
+                pushByteOnStack((state.ipNext / 256) and 255)
+                pushByteOnStack(state.ipNext and 255)
+                state.ipNext = findAbsoluteAddress(state.ip)
+            } }),
             M6502Instruction(0x21, "AND",2, AddressMode.INDIRECT_X, 6, {m->m.notImplemented()}),
             M6502Instruction(0x22, "X22", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x23, "X23", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
@@ -171,7 +175,9 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             M6502Instruction(0x49, "EOR",2, AddressMode.IMMEDIATE, 2, {m->m.notImplemented()}),
             M6502Instruction(0x4A, "LSR",1, AddressMode.ACCUMULATOR, 2, {m->m.notImplemented()}),
             M6502Instruction(0x4B, "X4B", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0x4C, "JMP",3, AddressMode.ABSOLUTE, 3, {m->m.notImplemented()}),
+            M6502Instruction(0x4C, "JMP",3, AddressMode.ABSOLUTE, 3, {_->
+                state.ipNext = findAbsoluteAddress(state.ip)
+            }),
             M6502Instruction(0x4D, "EOR",3, AddressMode.ABSOLUTE, 4, {m->m.notImplemented()}),
             M6502Instruction(0x4E, "LSR",3, AddressMode.ABSOLUTE, 6, {m->m.notImplemented()}),
             M6502Instruction(0x4F, "X42", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
@@ -198,7 +204,11 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             M6502Instruction(0x5E, "LSR",3, AddressMode.ABSOLUTE_X, 7, {m->m.notImplemented()}),
             M6502Instruction(0x5F, "X5F", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
 
-            M6502Instruction(0x60, "RTS",1, AddressMode.IMPLIED, 6, {m->m.notImplemented()}),
+            M6502Instruction(0x60, "RTS",1, AddressMode.IMPLIED, 6, { _-> run {
+                val low = pullByteFromStack()
+                val high = pullByteFromStack()
+                state.ipNext = (high * 256 + low)
+            } }),
             M6502Instruction(0x61, "ADC",2, AddressMode.INDIRECT_X, 6, {_->
                 state.acc = performAdd(mem.read(findAbsoluteAddress(((mem.read(state.ip+1)+state.x) and 255)-1)), state.acc)
             }),
@@ -218,7 +228,9 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             }),
             M6502Instruction(0x6A, "ROR",1, AddressMode.ACCUMULATOR, 2, {m->m.notImplemented()}),
             M6502Instruction(0x6B, "X6B", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0x6C, "JMP",3, AddressMode.INDIRECT, 5, {m->m.notImplemented()}),
+            M6502Instruction(0x6C, "JMP",3, AddressMode.INDIRECT, 5, {_->
+                state.ipNext = findAbsoluteAddress(findAbsoluteAddress(state.ip)-1)
+            }),
             M6502Instruction(0x6D, "ADC",3, AddressMode.ABSOLUTE, 4, {_->
                 state.acc = performAdd(mem.read(findAbsoluteAddress(state.ip)), state.acc)
             }),
