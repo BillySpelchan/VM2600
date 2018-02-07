@@ -1065,3 +1065,21 @@ add4: CLC
 .ORG 512
 .BYTE $11 $22 
 	; expect X=$1F, A =3F, Z=0, N=0
+
+	
+; BIT Zero Page
+	LDA #$0F
+	BIT 200
+	BRK
+.ORG 200
+.BYTE $FF
+	; A=$0F, Z=0, N=1, V=1
+	
+	
+; BIT Absolute
+	LDA #$F0
+	BIT 512
+	BRK
+.ORG 512
+.BYTE $0F
+	; A=$F0, Z=1, N=0, V=0

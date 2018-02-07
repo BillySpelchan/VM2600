@@ -141,7 +141,12 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             }),
             M6502Instruction(0x22, "X22", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0x23, "X23", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0x24, "BIT",2, AddressMode.ZERO_PAGE, 3, {m->m.notImplemented()}),
+            M6502Instruction(0x24, "BIT",2, AddressMode.ZERO_PAGE, 3, {_->run {
+                val src = mem.read(mem.read(state.ip+1))
+                adjustFlag(NEGATIVE_FLAG, (src and 128) == 128)
+                adjustFlag(OVERFLOW_FLAG, (src and 64) == 64)
+                adjustFlag(ZERO_FLAG, (src and state.acc) == 0)
+            }  }),
             M6502Instruction(0x25, "AND",2, AddressMode.ZERO_PAGE, 3, {_->
                 state.acc = setNumberFlags(state.acc and mem.read(mem.read(state.ip+1)))
             }),
@@ -155,7 +160,12 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             }),
             M6502Instruction(0x2A, "ROL",1, AddressMode.ACCUMULATOR, 2, {m->m.notImplemented()}),
             M6502Instruction(0x2B, "X2B", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
-            M6502Instruction(0x2C, "BIT",3, AddressMode.ABSOLUTE, 4, {m->m.notImplemented()}),
+            M6502Instruction(0x2C, "BIT",3, AddressMode.ABSOLUTE, 4, {_->run {
+                val src = mem.read(findAbsoluteAddress(state.ip))
+                adjustFlag(NEGATIVE_FLAG, (src and 128) == 128)
+                adjustFlag(OVERFLOW_FLAG, (src and 64) == 64)
+                adjustFlag(ZERO_FLAG, (src and state.acc) == 0)
+            } }),
             M6502Instruction(0x2D, "AND",3, AddressMode.ABSOLUTE, 4, {_->
                 state.acc = setNumberFlags(state.acc and mem.read(findAbsoluteAddress(state.ip)))
             }),

@@ -860,6 +860,18 @@ class M6502Tests : MemoryManager {
                         ".ORG 200", ".WORD 501", ".ORG 512", ".BYTE \$11 \$22"),
                 arrayListOf(Pair("X", 0x1F), Pair("A", 0x3F), Pair("Z", 0), Pair("N", 0)), verBool)
 
+        // BIT Zero Page
+        testResults = testResults and testAssemblySnippet("ORA Absolute,Y  and (Indirect),Y",
+                arrayListOf("LDA #\$0F", "BIT 200", "BRK",
+                        ".ORG 200", ".BYTE \$FF"),
+                arrayListOf(Pair("A", 0x0F), Pair("Z", 0), Pair("N", 1), Pair("V", 1)), verBool)
+
+        // BIT Absolute
+        testResults = testResults and testAssemblySnippet("ORA Absolute,Y  and (Indirect),Y",
+                arrayListOf("LDA #\$F0", "BIT 512", "BRK",
+                        ".ORG 512", ".BYTE \$0F"),
+                arrayListOf(Pair("A", 0xF0), Pair("Z", 1), Pair("N", 0), Pair("V", 0)), verBool)
+
         return testResults
     }
 
