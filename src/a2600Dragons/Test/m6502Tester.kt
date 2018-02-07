@@ -656,7 +656,7 @@ class M6502Tests : MemoryManager {
 
         // * Arithmetic (sbc) *
 
-        val verMFlag = true // verbose
+        val verMFlag = verbose
 
         // BCC test by counting times can add 10 before wrapping
         testResults = testResults and testAssemblySnippet("BCC",
@@ -684,7 +684,7 @@ class M6502Tests : MemoryManager {
 
         // * Comparison tests *
 
-        val verCompare = true // verbose
+        val verCompare = verbose
 
         // CMP Immediate
         testResults = testResults and testAssemblySnippet("CMP Immediate",
@@ -771,7 +771,7 @@ class M6502Tests : MemoryManager {
 
         // * Jumping and Subroutine tests *
 
-        val verJump = true // verbose
+        val verJump = verbose
 
         // JMP (both direct and indirect)
         testResults = testResults and testAssemblySnippet("JMP (both)",
@@ -785,10 +785,81 @@ class M6502Tests : MemoryManager {
                         "BRK", ".ORG 520", ".BYTE 4", "add4: CLC", "ADC #4", "RTS"  ),
                 arrayListOf(Pair("A", 16)), verJump)
 
-        /*
-	"CLD", "LDA #0", "TAY", "loop:	INY", "JSR add7", "CPY 520", "BMI loop",
-	"BRK", ".ORG 520", ".BYTE 6", "add7: CLC", "ADC #7", "RTS"
-	        */
+        if ( ! testResults) { println("Failed Jumping tests!"); return false }
+
+        // * Boolean Logic tests *
+
+        val verBool = true // verbose
+
+        // AND Immediate and Zero Page
+        testResults = testResults and testAssemblySnippet("AND Immediate and Zero Page",
+                arrayListOf("LDA #\$F0", "AND #$33", "TAX", "AND 200", "BRK", ".ORG 200", ".BYTE 3"),
+                arrayListOf(Pair("X", 0x30), Pair("A", 0), Pair("Z", 1), Pair("N", 0)), verBool)
+
+        // AND Absolute and Zero Page,X
+        testResults = testResults and testAssemblySnippet("AND Absolute and Zero Page,X",
+                arrayListOf("LDA #\$F0", "AND 512", "TAY", "LDX #11", "AND 189,X", "BRK",
+                        ".ORG 200", ".BYTE \$88", ".ORG 512", ".BYTE \$99"),
+                arrayListOf(Pair("Y", 0x90), Pair("A", 0x80), Pair("Z", 0), Pair("N", 1)), verBool)
+
+        // AND Absolute,X and (Indirect,X)
+        testResults = testResults and testAssemblySnippet("AND Absolute,X and (Indirect,X)",
+                arrayListOf("LDA #\$0F", "LDX #11", "AND (189,X)", "TAY", "AND 502,X", "BRK",
+                        ".ORG 200", ".WORD 512", ".ORG 512", ".BYTE \$99 $88"),
+                arrayListOf(Pair("Y", 0x09), Pair("A", 0x08), Pair("Z", 0), Pair("N", 0)), verBool)
+
+        // AND Absolute,Y  and (Indirect),Y
+        testResults = testResults and testAssemblySnippet("AND Absolute,Y  and (Indirect),Y",
+                arrayListOf("LDA #\$0F", "LDY #11", "AND (200),Y", "TAX", "AND 502,Y", "BRK",
+                        ".ORG 200", ".WORD 501", ".ORG 512", ".BYTE \$99 $88"),
+                arrayListOf(Pair("X", 0x09), Pair("A", 0x08), Pair("Z", 0), Pair("N", 0)), verBool)
+
+        // EOR Immediate and Zero Page
+        testResults = testResults and testAssemblySnippet("EOR Immediate and Zero Page",
+                arrayListOf("LDA #\$F0", "EOR #$33", "TAX", "EOR 200", "BRK", ".ORG 200", ".BYTE \$C3"),
+                arrayListOf(Pair("X", 0xC3), Pair("A", 0), Pair("Z", 1), Pair("N", 0)), verBool)
+
+        // EOR Immediate and Zero Page
+        testResults = testResults and testAssemblySnippet("EOR Absolute and Zero Page,X",
+                arrayListOf("LDA #\$F0", "EOR 512", "TAY", "LDX #11", "EOR 189,X", "BRK",
+                        ".ORG 200", ".BYTE \$88", ".ORG 512", ".BYTE \$0F"),
+                arrayListOf(Pair("Y", 0xFF), Pair("A", 0x77), Pair("Z", 0), Pair("N", 0)), verBool)
+
+        // EOR Absolute,X and (Indirect,X)
+        testResults = testResults and testAssemblySnippet("EOR Absolute,X and (Indirect,X)",
+                arrayListOf("LDA #\$0F", "LDX #11", "EOR (189,X)", "TAY", "EOR 502,X", "BRK",
+                        ".ORG 200", ".WORD 512", ".ORG 512", ".BYTE \$99 $77"),
+                arrayListOf(Pair("Y", 0x96), Pair("A", 0xE1), Pair("Z", 0), Pair("N", 1)), verBool)
+
+        // EOR Absolute,Y  and (Indirect),Y
+        testResults = testResults and testAssemblySnippet("EOR Absolute,Y  and (Indirect),Y",
+                arrayListOf("LDA #\$0F", "LDY #11", "EOR (200),Y", "TAX", "EOR 502,Y", "BRK",
+                        ".ORG 200", ".WORD 501", ".ORG 512", ".BYTE \$99 $88"),
+                arrayListOf(Pair("X", 0x96), Pair("A", 0x1E), Pair("Z", 0), Pair("N", 0)), verBool)
+
+        // ORA Immediate and Zero Page
+        testResults = testResults and testAssemblySnippet("ORA Immediate and Zero Page",
+                arrayListOf("LDA #\$F0", "ORA #$33", "TAX", "LDA #0", "ORA 200", "BRK", ".ORG 200", ".BYTE 0"),
+                arrayListOf(Pair("X", 0xF3), Pair("A", 0), Pair("Z", 1), Pair("N", 0)), verBool)
+
+        // ORA Absolute and Zero Page,X
+        testResults = testResults and testAssemblySnippet("ORA Absolute and Zero Page,X ",
+                arrayListOf("LDA #\$F0", "ORA 512", "TAY", "LDX #11", "ORA 189,X", "BRK",
+                        ".ORG 200", ".BYTE \$88", ".ORG 512", ".BYTE \$99"),
+                arrayListOf(Pair("Y", 0xF9), Pair("A", 0xF9), Pair("Z", 0), Pair("N", 1)), verBool)
+
+        // ORA Absolute,X and (Indirect,X)
+        testResults = testResults and testAssemblySnippet("ORA Absolute,X and (Indirect,X)",
+                arrayListOf("LDA #\$0F", "LDX #11", "ORA (189,X)", "TAY", "ORA 502,X", "BRK",
+                        ".ORG 200", ".WORD 512", ".ORG 512", ".BYTE \$99 $77"),
+                arrayListOf(Pair("Y", 0x9F), Pair("A", 0xFF), Pair("Z", 0), Pair("N", 1)), verBool)
+
+        // ORA Absolute,Y  and (Indirect),Y
+        testResults = testResults and testAssemblySnippet("ORA Absolute,Y  and (Indirect),Y",
+                arrayListOf("LDA #\$0F", "LDY #11", "ORA (200),Y", "TAX", "ORA 502,Y", "BRK",
+                        ".ORG 200", ".WORD 501", ".ORG 512", ".BYTE \$11 \$22"),
+                arrayListOf(Pair("X", 0x1F), Pair("A", 0x3F), Pair("Z", 0), Pair("N", 0)), verBool)
+
         return testResults
     }
 

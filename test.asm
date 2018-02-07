@@ -901,3 +901,167 @@ add4: CLC
 	; expect a 16
 	
 	
+	
+; **********************************	
+; *** Logical operations testing ***
+; **********************************
+
+; AND Immediate and Zero Page 
+	LDA #$F0
+	AND #$33 ; $30 result
+	TAX
+	AND 200 ; 30 and 03 = 0 to test Z
+	BRK
+.ORG 200
+.BYTE 3
+	; expect X=$30, A =0, Z=1, N=0
+
+	
+; AND Absolute and Zero Page,X 
+	LDA $F0
+	AND 512 ; $90 result
+	TAY
+	LDX #11
+	AND 189,X ; 90 and 88 = 8 to test Z
+	BRK
+.ORG 200
+.BYTE 88 
+.ORG 512
+.BYTE $99 
+	; expect Y=$90, A =128, Z=0, N=1
+
+	
+; AND Absolute,X and (Indirect,X)
+	LDA $0F
+	LDX #11
+	AND (189,X) ; $09 result
+	TAY
+	AND 502,X ; 9 and 88 = 8
+	BRK
+.ORG 200
+.WORD 512 
+.ORG 512
+.BYTE $99 $88 
+	; expect Y=$9, A =8, Z=0, N=0
+
+	
+; AND Absolute,Y  and (Indirect,Y) 
+	LDA $0F
+	LDY #11
+	AND (200),Y ; $09 result
+	TAX
+	AND 502,Y ; 9 and 88 = 8
+	BRK
+.ORG 200
+.WORD 501 
+.ORG 512
+.BYTE $99 $88 
+	; expect Y=$9, A =8, Z=0, N=0
+
+	
+	
+; EOR Immediate and Zero Page 
+	LDA #$F0
+	EOR #$33 ; $C3 result
+	TAX
+	EOR 200 ; C3 xor C3 = 0 to test Z
+	BRK
+.ORG 200
+.BYTE $C3
+	; expect X=$C3, A =0, Z=1, N=0
+
+	
+; EOR Absolute and Zero Page,X 
+	LDA $F0
+	EOR 512 ; $FF result
+	TAY
+	LDX #11
+	EOR 189,X ; FF and 88 = 77
+	BRK
+.ORG 200
+.BYTE 88 
+.ORG 512
+.BYTE $0F 
+	; expect Y=$FF, A =$77, Z=0, N=0
+
+	
+; EOR Absolute,X and (Indirect,X)
+	LDA $0F
+	LDX #11
+	EOR (189,X) ; $96 result
+	TAY
+	EOR 502,X ; 9 and 77 = E1
+	BRK
+.ORG 200
+.WORD 512 
+.ORG 512
+.BYTE $99 $77 
+	; expect Y=$96, A =$E1, Z=0, N=1
+
+	
+; EOR Absolute,Y  and (Indirect,Y) 
+	LDA $0F
+	LDY #11
+	EOR (200),Y ; $96 result
+	TAX
+	EOR 502,Y ; 9 and 88 = 1E
+	BRK
+.ORG 200
+.WORD 501 
+.ORG 512
+.BYTE $99 $88 
+	; expect Y=$96, A =$1E, Z=0, N=0
+
+	
+; ORA Immediate and Zero Page 
+	LDA #$F0
+	ORA #$33 ; $30 result
+	TAX
+	LDA #0
+	ORA 200 ; 0 and 0 = 0 to test Z
+	BRK
+.ORG 200
+.BYTE 0
+	; expect X=$F3, A =0, Z=1, N=0
+
+	
+; ORA Absolute and Zero Page,X 
+	LDA $F0
+	ORA 512 ; $F9 result
+	TAY
+	LDX #11
+	ORA 189,X ; F9 and 88 = F9 
+	BRK
+.ORG 200
+.BYTE 88 
+.ORG 512
+.BYTE $99 
+	; expect Y=$F9, A =$F9, Z=0, N=1
+
+	
+; ORA Absolute,X and (Indirect,X)
+	LDA $0F
+	LDX #11
+	ORA (189,X) ; $9F result
+	TAY
+	ORA 502,X ; 9F and 77 = FF
+	BRK
+.ORG 200
+.WORD 512 
+.ORG 512
+.BYTE $99 $77 
+	; expect Y=$9F, A =$FF, Z=0, N=0
+
+	
+; ORA Absolute,Y  and (Indirect,Y) 
+	LDA $0F
+	LDY #11
+	ORA (200),Y ; $1F result
+	TAX
+	ORA 502,Y ; 1F and 22 = 3F
+	BRK
+.ORG 200
+.WORD 501 
+.ORG 512
+.BYTE $11 $22 
+	; expect X=$1F, A =3F, Z=0, N=0
