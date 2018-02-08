@@ -789,7 +789,7 @@ class M6502Tests : MemoryManager {
 
         // * Boolean Logic tests *
 
-        val verBool = true // verbose
+        val verBool = verbose
 
         // AND Immediate and Zero Page
         testResults = testResults and testAssemblySnippet("AND Immediate and Zero Page",
@@ -871,6 +871,56 @@ class M6502Tests : MemoryManager {
                 arrayListOf("LDA #\$F0", "BIT 512", "BRK",
                         ".ORG 512", ".BYTE \$0F"),
                 arrayListOf(Pair("A", 0xF0), Pair("Z", 1), Pair("N", 0), Pair("V", 0)), verBool)
+
+        if ( ! testResults) { println("Failed Boolean Logic tests!"); return false }
+
+        // * Boolean Logic tests *
+
+        val verShift = true // verbose
+
+        // ROL accumulator
+        testResults = testResults and testAssemblySnippet("ROL accumulator",
+                arrayListOf( "LDA #128", "ROL A", "BRK"),
+                arrayListOf(Pair("A", 0), Pair("Z", 1), Pair("C", 1),  Pair("N", 0)), verShift)
+
+        // ROL with memory
+        testResults = testResults and testAssemblySnippet("ROL with memory",
+                arrayListOf("LDX #1", "ROL 254", "ROL 254,X", "ROL 256", "ROL 256,X", "BRK",
+                        ".ORG 254", ".BYTE 128 127 $77 $77"),
+                arrayListOf(Pair("MFE", 0),Pair("MFF", 255),Pair("M100", 0xEE),Pair("M101", 0xEE), Pair("Z", 0), Pair("C", 0),  Pair("N", 1)), verShift)
+
+        // ASL accumulator
+        testResults = testResults and testAssemblySnippet("ASL accumulator",
+                arrayListOf("LDA #128", "SEC", "ASL A", "BRK"),
+                arrayListOf(Pair("A", 0), Pair("Z", 1), Pair("C", 1),  Pair("N", 0)), verShift)
+
+        // ASL with memory
+        testResults = testResults and testAssemblySnippet("ASL with memory",
+                arrayListOf("LDX #1", "ASL 254", "ASL 254,X", "ASL 256", "ASL 256,X", "BRK",
+                        ".ORG 254", ".BYTE 128 127 \$F7 $77"),
+                arrayListOf(Pair("MFE", 0),Pair("MFF", 254),Pair("M100", 0xEE),Pair("M101", 0xEE), Pair("Z", 0), Pair("C", 0),  Pair("N", 1)), verShift)
+
+        // ROR accumulator
+        testResults = testResults and testAssemblySnippet("ROR accumulator",
+                arrayListOf( "LDA #1", "CLC", "ROR A", "BRK"),
+                arrayListOf(Pair("A", 0), Pair("Z", 1), Pair("C", 1),  Pair("N", 0)), verShift)
+
+        // ROR with memory
+        testResults = testResults and testAssemblySnippet("ROR with memory",
+                arrayListOf("LDX #1", "ROR 254", "ROR 254,X", "ROR 256", "ROR 256,X", "BRK",
+                        ".ORG 254", ".BYTE 1 254 \$EF \$FE"),
+                arrayListOf(Pair("MFE", 0),Pair("MFF", 255),Pair("M100", 0x77),Pair("M101", 0xFF), Pair("Z", 0), Pair("C", 0),  Pair("N", 1)), verShift)
+
+        // LSR accumulator
+        testResults = testResults and testAssemblySnippet("LSR accumulator",
+                arrayListOf("LDA #1", "SEC", "LSR A", "BRK"),
+                arrayListOf(Pair("A", 0), Pair("Z", 1), Pair("C", 1),  Pair("N", 0)), verShift)
+
+        // LSR with memory
+        testResults = testResults and testAssemblySnippet("LSR with memory",
+                arrayListOf("LDX #1", "LSR 254", "LSR 254,X", "LSR 256", "LSR 256,X", "BRK",
+                        ".ORG 254", ".BYTE 128 127 \$EE $76"),
+                arrayListOf(Pair("MFE", 64),Pair("MFF", 63),Pair("M100", 0x77),Pair("M101", 0x3B), Pair("Z", 0), Pair("C", 0),  Pair("N", 0)), verShift)
 
         return testResults
     }

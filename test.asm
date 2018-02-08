@@ -1083,3 +1083,87 @@ add4: CLC
 .ORG 512
 .BYTE $0F
 	; A=$F0, Z=1, N=0, V=0
+
+
+; *************************************	
+; *** Shifting and Rotating testing ***
+; *************************************
+
+; ROL accumulator 
+	CLC
+	LDA #128
+	ROL A
+	BRK
+	; expect A=0, Z=1, C=1, N=0
+
+
+; ROL with memory	
+	LDX #1
+	ROL 254
+	ROL 254,X
+	ROL 256
+	ROL 256,X
+	BRK
+.ORG 254
+.BYTE 128 127 $77 $77
+	;expect MFE=0 MFF=255 M100=$EE M101=$EE N=1, Z=0, C=0
+
+	
+; ASL accumulator 
+	LDA #128
+	SEC
+	ASL A
+	BRK
+	; expect A=0, Z=1, C=1, N=0
+
+
+; ASL with memory	
+	LDX #1
+	ASL 254
+	ASL 254,X
+	ASL 256
+	ASL 256,X
+	BRK
+.ORG 254
+.BYTE 128 127 $F7 $77
+	;expect MFE=0 MFF=254 M100=$EE M101=$EE N=1, Z=0, C=0
+
+
+; ROR accumulator 
+	CLC
+	LDA #1
+	ROR A
+	BRK
+	; expect A=0, Z=1, C=1, N=0
+
+
+; ROR with memory	
+	LDX #1
+	ROR 254
+	ROR 254,X
+	ROR 256
+	ROR 256,X
+	BRK
+.ORG 254
+.BYTE 1 254 $EF 254
+	;expect MFE=0 MFF=255 M100=$77 M101=$FF N=1, Z=0, C=0
+
+
+; LSR accumulator 
+	LDA #1
+	SEC
+	LSR A
+	BRK
+	; expect A=0, Z=1, C=1, N=0
+
+
+; LSR with memory	
+	LDX #1
+	LSR 254
+	LSR 254,X
+	LSR 256
+	LSR 256,X
+	BRK
+.ORG 254
+.BYTE 128 127 $EE $76
+	;expect MFE=64 MFF=63 M100=$77 M101=$3B N=1, Z=0, C=0
