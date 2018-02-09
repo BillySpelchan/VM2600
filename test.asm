@@ -1167,3 +1167,48 @@ add4: CLC
 .ORG 254
 .BYTE 128 127 $EE $76
 	;expect MFE=64 MFF=63 M100=$77 M101=$3B N=1, Z=0, C=0
+
+	
+; ***************************	
+; *** Interrupt handling  ***
+; ***************************
+
+; RTI
+	LDX $FC	; for test, set up stack
+	TXS		; the interrupt data alreay in there (see org)
+	CLC		; the carry flag is set in the stack
+	RTI		; return using stack data
+	BRK
+.ORG $1FD
+.BYTE  33 8 2
+.ORG 520
+	BCC done	; the carry flag is set in the stack!
+	LDX #42
+done: BRK
+	; expect X=42
+
+	
+; BRK  -> requires IRQ set to 512, cycles = 71
+	LDX #255 ; 2
+	TXS		 ; 4
+loop: BRK		; 11, 33, 55, END
+	; start here with 22, 44, 66
+	INX 	; 24, 46, 68
+	JMP loop	;27, 49, 71
+.ORG 512
+	; reach here at 11, 33, 55
+	TAY	; 13, 35, 57
+	TXA	; 15, 37, 59
+	RTI ; 22, 44, 66
+	;x=2, y = 0, A = 1
+
+	
+; NOP -> run for 32 cycles
+	LDX #0		;2
+	loop: NOP	; 4, 15, 26
+	NOP			; 6, 17, 28
+	NOP			; 8, 19, 30
+	INX			; 10, 21, 32
+	BNE loop	;13, 24
+	; expect at 32 cycles for x=3
+	

@@ -6,8 +6,8 @@ import a2600Dragons.m6502.MemoryManager
 class Cartridge : MemoryManager {
     var mem = Array<Int>(0x6000) {n->n and 255}
 
-    override fun read(address:Int):Int { return (mem[address] and 255)}
-    override fun write(address:Int, n:Int) { mem[address] = n and 255}
+    override fun read(address:Int):Int { return (mem[address and 0x5FFF] and 255)}
+    override fun write(address:Int, n:Int) { mem[address and 0x5FFF] = n and 255}
 }
 
 

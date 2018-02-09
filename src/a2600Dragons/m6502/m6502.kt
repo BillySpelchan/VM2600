@@ -73,7 +73,14 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
     var state = ProcessorState(0,0,0,0,32,0,0)
     // array of instructions indexed by op code
     val commands = arrayOf(
-            M6502Instruction(0x00, "BRK", 1,AddressMode.IMPLIED, 7, {mach->mach.notImplemented()}),
+            M6502Instruction(0x00, "BRK", 1,AddressMode.IMPLIED, 7, {_->
+                run {
+                    pushByteOnStack((state.ipNext / 256) and 255)
+                    pushByteOnStack(state.ipNext and 255)
+                    pushByteOnStack(state.flags or BREAK_FLAG or INTERRUPT_FLAG)
+                    state.ipNext = findAbsoluteAddress(0xfffd)
+                }
+            }),
             M6502Instruction(0x01, "ORA",2, AddressMode.INDIRECT_X, 6, {_->
                 state.acc = setNumberFlags(state.acc or mem.read(findAbsoluteAddress(((mem.read(state.ip+1)+state.x) and 255)-1)))
             }),
@@ -247,7 +254,12 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             }),
             M6502Instruction(0x3F, "X3F", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
 
-            M6502Instruction(0x40, "RTI",1, AddressMode.IMPLIED, 6, {m->m.notImplemented()}),
+            M6502Instruction(0x40, "RTI",1, AddressMode.IMPLIED, 6, { _-> run {
+                state.flags = pullByteFromStack()
+                val low = pullByteFromStack()
+                val high = pullByteFromStack()
+                state.ipNext = (high * 256 + low)
+            } }),
 
             M6502Instruction(0x41, "EOR",2, AddressMode.INDIRECT_X, 6, {_->
                 state.acc = setNumberFlags(state.acc xor mem.read(findAbsoluteAddress(((mem.read(state.ip+1)+state.x) and 255)-1)))
@@ -665,7 +677,7 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
             M6502Instruction(0xE9, "SBC",2, AddressMode.IMMEDIATE, 2, {_->
                 state.acc = performSubtract(state.acc, mem.read(state.ip+1))
             }),
-            M6502Instruction(0xEA, "NOP",1, AddressMode.IMPLIED, 2, {m->m.notImplemented()}),
+            M6502Instruction(0xEA, "NOP",1, AddressMode.IMPLIED, 2, {_->}),
             M6502Instruction(0xEB, "XEB", 1 , AddressMode.FUTURE_EXPANSION, 6, {m->m.futureExpansion()}),
             M6502Instruction(0xEC, "CPX",3, AddressMode.ABSOLUTE, 4, {_->
                 performCompare(state.x, mem.read(findAbsoluteAddress(state.ip)))
@@ -988,17 +1000,27 @@ class M6502(var mem:MemoryManager, var stackPage:Int = 1) {
         commands[mem.read(ip)].execute(this)
     }
 
+    fun step() {
+        val opCode = mem.read(state.ip)
+        state.ipNext = state.ip + commands[opCode].size
+        state.tick += commands[opCode].cycles
+        commands[opCode].execute(this)
+        state.ip = state.ipNext
+    }
+
+    fun runToCycle(cycle:Long, address:Int=-1) {
+        if (address >=0)
+            state.ip = address
+
+        while (state.tick < cycle)
+            step()
+    }
+
     fun runToBreak(address:Int = -1) {
         if (address >=0)
             state.ip = address
-        var opCode = mem.read(state.ip)
-        while (opCode != 0) {
-            state.ipNext = state.ip + commands[opCode].size
-            state.tick += commands[opCode].cycles
-            commands[opCode].execute(this)
-            state.ip = state.ipNext
-            opCode = mem.read(state.ip)
-        }
+        while(mem.read(state.ip) != 0)
+            step()
     }
 
     fun grabProcessorState(): ProcessorState {

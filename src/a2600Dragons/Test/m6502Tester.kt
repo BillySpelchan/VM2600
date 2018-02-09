@@ -296,7 +296,8 @@ class M6502Tests : MemoryManager {
     }
 
 
-    fun testAssemblySnippet(testName:String, assembly:ArrayList<String>, anticipatedResults:ArrayList<Pair<String,Int>>, verbose:Boolean = false):Boolean {
+    fun testAssemblySnippet(testName:String, assembly:ArrayList<String>, anticipatedResults:ArrayList<Pair<String,Int>>,
+                            verbose:Boolean = false, irq:Int = 0, runToCycle:Long = 0):Boolean {
         val cart = Cartridge()
         val m6502 = M6502(cart)
 
@@ -311,7 +312,12 @@ class M6502Tests : MemoryManager {
         // run until break
         for (cntr in 0..4095)
             cart.write(cntr, assembler.currentBank.readBankAddress(cntr))
-        m6502.runToBreak(0)
+        cart.write(0xfffe, irq and 255)
+        cart.write(0xffff, (irq / 256) and 255)
+        if (runToCycle > 0)
+            m6502.runToCycle(runToCycle, 0)
+        else
+            m6502.runToBreak(0)
 
         // compare results
         val processorState = m6502.grabProcessorState()
@@ -876,7 +882,7 @@ class M6502Tests : MemoryManager {
 
         // * Boolean Logic tests *
 
-        val verShift = true // verbose
+        val verShift = verbose
 
         // ROL accumulator
         testResults = testResults and testAssemblySnippet("ROL accumulator",
@@ -921,6 +927,29 @@ class M6502Tests : MemoryManager {
                 arrayListOf("LDX #1", "LSR 254", "LSR 254,X", "LSR 256", "LSR 256,X", "BRK",
                         ".ORG 254", ".BYTE 128 127 \$EE $76"),
                 arrayListOf(Pair("MFE", 64),Pair("MFF", 63),Pair("M100", 0x77),Pair("M101", 0x3B), Pair("Z", 0), Pair("C", 0),  Pair("N", 0)), verShift)
+
+        if ( ! testResults) { println("Failed Rotation and Shifting tests!"); return false }
+
+        // * Boolean Logic tests *
+
+        val verRTI = true // verbose
+
+        // RTI
+        testResults = testResults and testAssemblySnippet("RTI",
+                arrayListOf("LDX #\$FC","TXS","CLC","RTI","BRK",".ORG \$1FD",
+                        ".BYTE  33 8 2",".ORG 520","BCC done","LDX #42","done: BRK"),
+                arrayListOf(Pair("X", 42)), verRTI)
+
+        // BRK
+        testResults = testResults and testAssemblySnippet("BRK",
+                arrayListOf("LDX #255", "TXS", "loop: BRK", "INX", "JMP loop",
+                        ".ORG 512", "TAY", "TXA", "RTI"),
+                arrayListOf(Pair("X", 2), Pair("Y", 0), Pair("A", 1)), verRTI, 512, 71)
+
+        // NOP
+        testResults = testResults and testAssemblySnippet("NOP",
+                arrayListOf("LDX #0", "loop: NOP", "NOP", "NOP", "INX", "BNE loop", "BRK"),
+                arrayListOf(Pair("X", 3)), verRTI, 0, 32)
 
         return testResults
     }
