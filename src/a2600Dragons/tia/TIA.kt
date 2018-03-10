@@ -1,11 +1,6 @@
 package a2600Dragons.tia
 
-import a2600Dragons.a2600.Cartridge
-
-interface IRasterizer {
-    fun setScanline(line:Int, pixels:Array<Int>)
-}
-
+/*
 enum class TIAPlayerSize(val size:Int) {
     ONE (0),
     TWO_CLOSE (1),
@@ -15,8 +10,8 @@ enum class TIAPlayerSize(val size:Int) {
     DOUBLE_SIZE (5),
     THREE_MEDIUM (6),
     QUAD_PLAYER (7),
-
 }
+*/
 
 enum class TIARegisters(val address:Int) {
     VSYNC  ( 0x00 ),    // vertical sync - set to 2 to start sync and to 0 to stop
@@ -150,14 +145,59 @@ class TIAColors() {
             0xFF442800.toInt(),0xFF442800.toInt(),0xFF644818.toInt(),0xFF644818.toInt(),0xFF846830.toInt(),0xFF846830.toInt(),0xFFa08444.toInt(),0xFFa08444.toInt(),
             0xFFb89c58.toInt(),0xFFb89c58.toInt(),0xFFd0b46c.toInt(),0xFFd0b46c.toInt(),0xFFe8cc7c.toInt(),0xFFe8cc7c.toInt(),0xFFfce08c.toInt(),0xFFfce08c.toInt()
     )
+
     fun getARGB(indx:Int):Int {
         if ((indx < 0) or (indx > 255))
             return 0
         else
             return colorTable[indx]
     }
+
+    fun getHTMLColor(indx:Int):String {
+        val noAlphaColor = getARGB(indx) and 0xFFFFFF
+        return "#${noAlphaColor.toString(16)}"
+    }
 }
 
-class TIA (mem:Cartridge, display:IRasterizer ) {
+@Suppress("MemberVisibilityCanPrivate", "CanBeVal")
+class TIA ( ) {
+    var colorClock:Int = 0
+    var backgroundColor:Int = 0
+    var rasterLine:Array<Int> = Array<Int>(160, {_->0})
 
+    fun writeRegister(address:Int, value:Int) {
+        when (address) {
+            TIARegisters.COLUBK.address -> backgroundColor = value
+            else -> println("TIA register $address not implemented!")
+        }
+    }
+
+/*
+    fun readRegister(address:Int) {
+
+    }
+*/
+
+    // return true when scanline complete, false otherwise
+    fun nextClockTick():Boolean {
+        // run current pixel
+        val column = colorClock - 68
+        if (column >= 0) {
+            var pixelColor = backgroundColor
+
+            // TODO render playfield
+            // TODO render player-missile graphics and set collisions
+
+            rasterLine[column] = pixelColor
+        }
+        ++colorClock
+         return if (colorClock >= 228) {
+             colorClock = 0
+             true
+         } else false
+    }
+
+    fun renderScanline() {
+        while (!nextClockTick()) /* run clock until scanline finished */;
+    }
 }
