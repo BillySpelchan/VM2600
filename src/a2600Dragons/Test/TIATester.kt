@@ -2,13 +2,12 @@ package a2600Dragons.Test
 
 import a2600Dragons.tia.TIA
 import a2600Dragons.tia.TIAColors
-import a2600Dragons.tia.TIARegisters
+import a2600Dragons.tia.TIAPIARegs
 import javafx.application.Application
 import javafx.geometry.Pos
 import javafx.scene.Scene
+import javafx.scene.control.*
 //import javafx.scene.control.Button
-import javafx.scene.control.Tab
-import javafx.scene.control.TabPane
 import javafx.scene.image.ImageView
 import javafx.scene.image.PixelWriter
 import javafx.scene.image.WritableImage
@@ -29,7 +28,7 @@ class TIATester : Application() {
         }
     }
 
-    fun rasterizeTIA(pixelWriter: PixelWriter, scanline:Int, data:Array<Int>) {
+    private fun rasterizeTIA(pixelWriter: PixelWriter, scanline:Int, data:Array<Int>) {
         for (cntr in 0..159)
             pixelWriter.setArgb(cntr, scanline, tiaColors.getARGB(data[cntr]))
     }
@@ -38,6 +37,7 @@ class TIATester : Application() {
 //        var btn = Button("Hello JavaFX")
 //        btn.setOnAction { message.text = "Hello World!" }
         val tabs = TabPane()
+        tabs.tabs.add(buildTIAConsoleTab())
         tabs.tabs.add(buildColorpickerTab())
         tabs.tabs.add(buildRainbowTab())
         val scene = Scene(tabs, SCENE_WIDTH, SCENE_HEIGHT)
@@ -82,23 +82,71 @@ class TIATester : Application() {
 
         val tiaImage = WritableImage(160, 192)
         val tia = TIA()
+        tia.writeRegister(TIAPIARegs.PF0, 0x50)
+        tia.writeRegister(TIAPIARegs.PF1, 0xAA)
+        tia.writeRegister(TIAPIARegs.PF2, 0x55)
+        tia.writeRegister(TIAPIARegs.COLUPF, 96)
         for (cntr in 0..127) {
-            tia.writeRegister(TIARegisters.COLUBK.address, cntr * 2)
+            tia.writeRegister(TIAPIARegs.COLUBK, cntr * 2)
             tia.renderScanline()
             rasterizeTIA(tiaImage.pixelWriter, cntr, tia.rasterLine)
         }
-        for (cntr in 128..191)
+        tia.writeRegister(TIAPIARegs.PF0, 0xA0)
+        tia.writeRegister(TIAPIARegs.PF1, 0x55)
+        tia.writeRegister(TIAPIARegs.PF2, 0xAA)
+        for (cntr in 128..191) {
+            tia.renderScanline()
             rasterizeTIA(tiaImage.pixelWriter, cntr, tia.rasterLine)
+        }
 
         val tiaView = ImageView(tiaImage)
-        tiaView.scaleX = 4.0
-        tiaView.scaleY = 2.0
         tiaView.isPreserveRatio = false
+        tiaView.fitWidth = 640.0
+        tiaView.fitHeight = 192 * 2.0
+//        tiaView.scaleX = 2.0
+//        tiaView.scaleY = 1.0
         val tab = Tab("Rainbow")
         tab.content = tiaView
         tab.isClosable = false
         return tab
 
+    }
+
+    private fun consoleTests(verbose:Boolean):String {
+        val tia = TIA()
+        var text = "run tests in verbose mode: ${verbose}\n"
+
+        text += "Reverse 0xF becomes : ${tia.reversePFBits(0xF).toString(16)}\n"
+
+        tia.writeRegister(TIAPIARegs.PF0, 0x50)
+        tia.writeRegister(TIAPIARegs.PF1, 0xAA)
+        tia.writeRegister(TIAPIARegs.PF2, 0x55)
+        text += "PLAYFEILD - EVEN Bits: ${tia.playfieldBits.toString(2)}\n"
+
+        tia.writeRegister(TIAPIARegs.PF0, 0xA0)
+        tia.writeRegister(TIAPIARegs.PF1, 0x55)
+        tia.writeRegister(TIAPIARegs.PF2, 0xAA)
+        text += "PLAYFEILD - ODD Bits : ${tia.playfieldBits.toString(2)}\n"
+
+        return text
+    }
+
+    private fun buildTIAConsoleTab():Tab {
+        val console = TextArea("TIA text-based tests")
+        console.isWrapText = true
+        console.prefRowCount = 100
+
+
+        val verboseToggle = CheckBox("Run tests in verbose mode")
+        val runTestButton = Button("Run Tests")
+        runTestButton.setOnAction { event -> run{
+            console.text += consoleTests(verboseToggle.isSelected)
+        } }
+        val root = VBox(10.0, verboseToggle, runTestButton, console)
+        val tab = Tab("Console")
+        tab.content = root
+        tab.isClosable = false
+        return tab
     }
 }
 

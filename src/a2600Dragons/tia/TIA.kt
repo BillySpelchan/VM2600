@@ -13,85 +13,86 @@ enum class TIAPlayerSize(val size:Int) {
 }
 */
 
-enum class TIARegisters(val address:Int) {
-    VSYNC  ( 0x00 ),    // vertical sync - set to 2 to start sync and to 0 to stop
-    VBLANK ( 0x01 ),    // vertical blank
-    WSYNC  ( 0x02 ),    // wait for sync
-    RSYNC  ( 0x03 ),    // Reset sync - for testing
-    NUSIZ0 ( 0x04 ),    // number-size player-missile 0  -> xxMMxPPP (Missile size, Player size/copies)
-    NUSIZ1 ( 0x05 ),    // number-size player-missile 1  -> xxMMxPPP (Missile size, Player size/copies)
-    COLUP0 ( 0x06 ),    // color-luminosity player 0
-    COLUP1 ( 0x07 ),    // color-luminosity player 2
-    COLUPF ( 0x08 ),    // color-luminosity playfield
-    COLUBK ( 0x09 ),    // color-luminosity background
-    CTRLPF ( 0x0A ),    // control playfield ball size & collisions
-    REFP0  ( 0x0B ),    // reflect player 0
-    REFP1  ( 0x0C ),    // reflect player 1
-    PF0    ( 0x0D ),    // Playfield register 0 (upper nibble display order 4..7)
-    PF1    ( 0x0E ),    // Playfield register 1 (display order 7..0)
-    PF2    ( 0x0F ),    // Playfield register 2 (display order 0..7)
-    RESP0  ( 0x10 ),    // reset player 0
-    RESP1  ( 0x11 ),    // reset player 1
-    RESM0  ( 0x12 ),    // reset missile 0
-    RESM1  ( 0x13 ),    // reset missile 1
-    RESBL  ( 0x14 ),    // reset Ball
-    AUDC0  ( 0x15 ),    // audio control 0
-    AUDC1  ( 0x16 ),    // audio control 1
-    AUDF0  ( 0x17 ),    // audio frequency 0
-    AUDF1  ( 0x18 ),    // audio frequency 1
-    AUDV0  ( 0x19 ),    // audio volume 0
-    AUDV1  ( 0x1A ),    // audio volume 1
-    GRP0   ( 0x1B ),    // graphics player 0 (bit pattern)
-    GRP1   ( 0x1C ),    // graphics player 1
-    ENAM0  ( 0x1D ),    // graphics (enable) missile 0
-    ENAM1  ( 0x1E ),    // graphics (enable) missile 1
-    ENABL  ( 0x1F ),    // graphics (enable) ball
-    HMP0   ( 0x20 ),    // horizontal motion player 0
-    HMP1   ( 0x21 ),    // horizontal motion player 1
-    HMM0   ( 0x22 ),    // horizontal motion missile 0
-    HMM1   ( 0x23 ),    // horizontal motion missile 1
-    HMBL   ( 0x24 ),    // horizontal motion ball
-    VDELP0 ( 0x25 ),    // vertical delay player 0
-    VDELP1 ( 0x26 ),    // vertical delay player 1
-    VDELBL ( 0x27 ),    // vertical delay ball
-    RESMP0 ( 0x28 ),    // Reset missile 0 to player 0
-    RESMP1 ( 0x29 ),    // Reset missile 1 to player 1
-    HMOVE  ( 0x2A ),    // Apply horizontal motion
-    HMCLR  ( 0x2B ),    // clear horizontal motion registers
-    CXCLR  ( 0x2C ),    // clear collision latches
+@Suppress("unused")
+object TIAPIARegs {
+    const val VSYNC  = 0x00     // vertical sync - set to 2 to start sync and to 0 to stop
+    const val VBLANK = 0x01     // vertical blank
+    const val WSYNC  = 0x02     // wait for sync
+    const val RSYNC  = 0x03     // Reset sync - for testing
+    const val NUSIZ0 = 0x04     // number-size player-missile 0  -> xxMMxPPP =Missile size, Player size/copies)
+    const val NUSIZ1 = 0x05     // number-size player-missile 1  -> xxMMxPPP =Missile size, Player size/copies)
+    const val COLUP0 = 0x06     // color-luminosity player 0
+    const val COLUP1 = 0x07     // color-luminosity player 2
+    const val COLUPF = 0x08     // color-luminosity playfield
+    const val COLUBK = 0x09     // color-luminosity background
+    const val CTRLPF = 0x0A     // control playfield ball size & collisions
+    const val REFP0  = 0x0B     // reflect player 0
+    const val REFP1  = 0x0C     // reflect player 1
+    const val PF0    = 0x0D     // Playfield register 0 =upper nibble display order 4..7)
+    const val PF1    = 0x0E     // Playfield register 1 =display order 7..0)
+    const val PF2    = 0x0F     // Playfield register 2 =display order 0..7)
+    const val RESP0  = 0x10     // reset player 0
+    const val RESP1  = 0x11     // reset player 1
+    const val RESM0  = 0x12     // reset missile 0
+    const val RESM1  = 0x13     // reset missile 1
+    const val RESBL  = 0x14     // reset Ball
+    const val AUDC0  = 0x15     // audio control 0
+    const val AUDC1  = 0x16     // audio control 1
+    const val AUDF0  = 0x17     // audio frequency 0
+    const val AUDF1  = 0x18     // audio frequency 1
+    const val AUDV0  = 0x19     // audio volume 0
+    const val AUDV1  = 0x1A     // audio volume 1
+    const val GRP0   = 0x1B     // graphics player 0 =bit pattern)
+    const val GRP1   = 0x1C     // graphics player 1
+    const val ENAM0  = 0x1D     // graphics =enable) missile 0
+    const val ENAM1  = 0x1E     // graphics =enable) missile 1
+    const val ENABL  = 0x1F     // graphics =enable) ball
+    const val HMP0   = 0x20     // horizontal motion player 0
+    const val HMP1   = 0x21     // horizontal motion player 1
+    const val HMM0   = 0x22     // horizontal motion missile 0
+    const val HMM1   = 0x23     // horizontal motion missile 1
+    const val HMBL   = 0x24     // horizontal motion ball
+    const val VDELP0 = 0x25     // vertical delay player 0
+    const val VDELP1 = 0x26     // vertical delay player 1
+    const val VDELBL = 0x27     // vertical delay ball
+    const val RESMP0 = 0x28     // Reset missile 0 to player 0
+    const val RESMP1 = 0x29     // Reset missile 1 to player 1
+    const val HMOVE  = 0x2A     // Apply horizontal motion
+    const val HMCLR  = 0x2B     // clear horizontal motion registers
+    const val CXCLR  = 0x2C     // clear collision latches
 
     // Read registers
-    CXM0P  ( 0x30 ),    // read collision (bit 7) MO with P1 (Bit 6) M0 with P0
-    CXM1P  ( 0x31 ),    // read collision (bit 7) M1 with P0 (Bit 6) M1 with P1
-    CXP0FB ( 0x32 ),    // read collision (bit 7) PO with PF (Bit 6) P0 with BL
-    CXP1FB ( 0x33 ),    // read collision (bit 7) P1 with PF (Bit 6) P1 with BL
-    CXM0FB ( 0x34 ),    // read collision (bit 7) MO with PF (Bit 6) M0 with BL
-    CXM1FB ( 0x35 ),    // read collision (bit 7) M1 with PF (Bit 6) M1 with BL
-    CXBLPF ( 0x36 ),    // read collision (bit 7) BL with PF (Bit 6) unused
-    CXPPMM ( 0x37 ),    // read collision (bit 7) P0 with P1 (Bit 6) M0 with M1
-    INPT0  ( 0x38 ),    // Dumped (Paddle) input port 0
-    INPT1  ( 0x39 ),    // Dumped (Paddle) input port 1
-    INPT2  ( 0x3A ),    // Dumped (Paddle) input port 2
-    INPT3  ( 0x3B ),    // Dumped (Paddle) input port 3
-    INPT4  ( 0x3C ),    // Latched (Joystick) input port 4
-    INPT5  ( 0x3D ),    // Latched (Joystick) input port 5
+    const val CXM0P  = 0x30     // read collision =bit 7) MO with P1 =Bit 6) M0 with P0
+    const val CXM1P  = 0x31     // read collision =bit 7) M1 with P0 =Bit 6) M1 with P1
+    const val CXP0FB = 0x32     // read collision =bit 7) PO with PF =Bit 6) P0 with BL
+    const val CXP1FB = 0x33     // read collision =bit 7) P1 with PF =Bit 6) P1 with BL
+    const val CXM0FB = 0x34     // read collision =bit 7) MO with PF =Bit 6) M0 with BL
+    const val CXM1FB = 0x35     // read collision =bit 7) M1 with PF =Bit 6) M1 with BL
+    const val CXBLPF = 0x36     // read collision =bit 7) BL with PF =Bit 6) unused
+    const val CXPPMM = 0x37     // read collision =bit 7) P0 with P1 =Bit 6) M0 with M1
+    const val INPT0  = 0x38     // Dumped =Paddle) input port 0
+    const val INPT1  = 0x39     // Dumped =Paddle) input port 1
+    const val INPT2  = 0x3A     // Dumped =Paddle) input port 2
+    const val INPT3  = 0x3B     // Dumped =Paddle) input port 3
+    const val INPT4  = 0x3C     // Latched =Joystick) input port 4
+    const val INPT5  = 0x3D     // Latched =Joystick) input port 5
 
-    SWCHA  ( 0x280 ),
-    SWACNT ( 0x281 ),
-    SWCHB  ( 0x282 ),
-    SWBCNT ( 0x283 ),
-    INTIM  ( 0x284 ),
-    TIMINT ( 0x285 ),
+    const val SWCHA  = 0x280
+    const val SWACNT = 0x281
+    const val SWCHB  = 0x282
+    const val SWBCNT = 0x283
+    const val INTIM  = 0x284
+    const val TIMINT = 0x285
 
-    TIM1T  ( 0x294 ),
-    TIM8T  ( 0x295 ),
-    TIM64T ( 0x296 ),
-    T1024T ( 0x297 ),
+    const val TIM1T  = 0x294
+    const val TIM8T  = 0x295
+    const val TIM64T = 0x296
+    const val T1024T = 0x297
 
-    TIM1I  ( 0x29c ),
-    TIM8I  ( 0x29d ),
-    TIM64I ( 0x29e ),
-    T1024I ( 0x29f )
+    const val TIM1I  = 0x29c
+    const val TIM8I  = 0x29d
+    const val TIM64I = 0x29e
+    const val T1024I = 0x29f
 }
 
 class TIAColors() {
@@ -162,12 +163,49 @@ class TIAColors() {
 @Suppress("MemberVisibilityCanPrivate", "CanBeVal")
 class TIA ( ) {
     var colorClock:Int = 0
+
+    // colors
     var backgroundColor:Int = 0
+    var playfieldBallColor:Int = 0
+    var playerMissile0Color:Int = 0
+    var playerMissile1Color:Int = 0
+
+    // playfield
+    var playfieldBits:Int = 0
+    var mirror = true
+
+    // raster data
     var rasterLine:Array<Int> = Array<Int>(160, {_->0})
+
+    fun reversePFBits(value:Int):Int {
+        var reversed = 0
+        var testBit = 1
+        for (cntr in 0..7) {
+            reversed *= 2
+            reversed += if ((testBit and value) > 0) 1 else 0
+            testBit *= 2
+        }
+        return reversed
+    }
 
     fun writeRegister(address:Int, value:Int) {
         when (address) {
-            TIARegisters.COLUBK.address -> backgroundColor = value
+            TIAPIARegs.COLUBK -> backgroundColor = value
+            TIAPIARegs.COLUPF -> playfieldBallColor = value
+            TIAPIARegs.COLUP0 -> playerMissile0Color = value
+            TIAPIARegs.COLUP1 -> playerMissile1Color = value
+            TIAPIARegs.PF0 -> {
+                var bits = reversePFBits(value)
+                playfieldBits = (playfieldBits and 0xFFFF) or (bits shl(16))
+            }
+            TIAPIARegs.PF1 -> {
+                var bits = value
+                playfieldBits = (playfieldBits and 0xF00FF) or (bits shl(8))
+            }
+            TIAPIARegs.PF2 -> {
+                var bits = reversePFBits(value)
+                playfieldBits = (playfieldBits and 0xFFF00) or bits
+            }
             else -> println("TIA register $address not implemented!")
         }
     }
@@ -185,7 +223,12 @@ class TIA ( ) {
         if (column >= 0) {
             var pixelColor = backgroundColor
 
-            // TODO render playfield
+            // render playfield
+            val pfCol = if (column < 80) column / 4 else
+                if (mirror) (159 - column) / 4 else (column - 80) / 4
+            var pfPixelMask = 0x80000 shr pfCol
+            pixelColor = if ((playfieldBits and pfPixelMask) > 0) playfieldBallColor else pixelColor
+
             // TODO render player-missile graphics and set collisions
 
             rasterLine[column] = pixelColor
