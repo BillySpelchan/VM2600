@@ -1,5 +1,8 @@
 package a2600Dragons.tia
 
+import kotlin.math.min
+import kotlin.math.max
+
 /*
 enum class TIAPlayerSize(val size:Int) {
     ONE (0),
@@ -93,6 +96,16 @@ object TIAPIARegs {
     const val TIM8I  = 0x29d
     const val TIM64I = 0x29e
     const val T1024I = 0x29f
+
+    // Player sprite scale/copy modes
+    const val PMG_NORMAL = 0
+    const val PMG_TWO_CLOSE = 1
+    const val PMG_TWO_MEDIUM = 2
+    const val PMG_THREE_CLOSE = 3
+    const val PMG_TWO_WIDE = 4
+    const val PMG_DOUBLE_SIZE = 5
+    const val PMG_THREE_MEDIUM = 6
+    const val PMG_QUAD_PLAYER = 7
 }
 
 class TIAColors() {
@@ -157,6 +170,53 @@ class TIAColors() {
     fun getHTMLColor(indx:Int):String {
         val noAlphaColor = getARGB(indx) and 0xFFFFFF
         return "#${noAlphaColor.toString(16)}"
+    }
+}
+
+class PlayerMissileGraphic(var size:Int, var collisionMask:Int) {
+    var scale = 1
+    var copies = 1
+    var distanceBetweenCopies = 0   // close = 2, med = 4 far = 8
+    var x = 0
+    var deltaX = 0
+    var drawingBits = 0
+    var delayedDraw = false
+    var mirror = false
+
+    fun isPixelDrawn(col:Int):Boolean {
+        if (col < x) return false
+        if (delayedDraw) return false
+
+        var pixelAtCol = false
+        for (copyCount in 1..copies) {
+            val copyStart = x + (copyCount - 1) * size * scale * distanceBetweenCopies
+            val copyEnd = copyStart + size * scale
+            if ((col >= copyStart) and (col < copyEnd)) {
+                val bitPos = (col - copyStart) / scale
+                val bit = if (mirror) 1 shl bitPos else (1 shl (size-1)) ushr bitPos
+                if ((bit and drawingBits) > 0) pixelAtCol = true
+            }
+        }
+
+        return pixelAtCol
+    }
+
+    fun hmove() {
+        x = min(159, max(0, x + deltaX))
+    }
+
+    fun setPlayerScaleCopy(scmode:Int) {
+        when (scmode) {
+            TIAPIARegs.PMG_NORMAL -> {scale = 1; copies = 1; distanceBetweenCopies = 1}
+            TIAPIARegs.PMG_TWO_CLOSE  -> {scale = 1; copies = 2; distanceBetweenCopies = 2}
+            TIAPIARegs.PMG_TWO_MEDIUM  -> {scale = 1; copies = 2; distanceBetweenCopies = 4}
+            TIAPIARegs.PMG_THREE_CLOSE -> {scale = 1; copies = 3; distanceBetweenCopies = 2}
+            TIAPIARegs.PMG_TWO_WIDE  -> {scale = 1; copies = 2; distanceBetweenCopies = 8}
+            TIAPIARegs.PMG_DOUBLE_SIZE  -> {scale = 2; copies = 1; distanceBetweenCopies = 1}
+            TIAPIARegs.PMG_THREE_MEDIUM  -> {scale = 1; copies = 3; distanceBetweenCopies = 4}
+            TIAPIARegs.PMG_QUAD_PLAYER  -> {scale = 4; copies = 1; distanceBetweenCopies = 1}
+        }
+
     }
 }
 
