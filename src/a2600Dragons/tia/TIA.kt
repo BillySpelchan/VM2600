@@ -305,6 +305,7 @@ class TIA ( ) {
      * Handle a write to one of the TIA registers by doing the appropriate internal work.
      */
     fun writeRegister(address:Int, value:Int) {
+        val column = colorClock - 68
         when (address) {
             // color control registers
             TIAPIARegs.COLUBK -> backgroundColor = value
@@ -338,6 +339,14 @@ class TIA ( ) {
             TIAPIARegs.ENAM1 -> sprites[TIAPIARegs.ISPRITE_MISSILE1].drawingBits = if ((value and 2) == 2) 1 else 0
             TIAPIARegs.GRP0 -> sprites[TIAPIARegs.ISPRITE_PLAYER0].drawingBits = value and 255
             TIAPIARegs.GRP1 -> sprites[TIAPIARegs.ISPRITE_PLAYER1].drawingBits = value and 255
+            // PMG sprite positioning registers
+            TIAPIARegs.RESBL -> sprites[TIAPIARegs.ISPRITE_BALL].x = column
+            TIAPIARegs.RESP0 -> sprites[TIAPIARegs.ISPRITE_PLAYER0].x = column
+            TIAPIARegs.RESP1 -> sprites[TIAPIARegs.ISPRITE_PLAYER1].x = column
+            TIAPIARegs.RESM0 -> sprites[TIAPIARegs.ISPRITE_MISSILE0].x = column
+            TIAPIARegs.RESM1 -> sprites[TIAPIARegs.ISPRITE_MISSILE1].x = column
+            TIAPIARegs.RESMP0 -> sprites[TIAPIARegs.ISPRITE_MISSILE0].x = sprites[TIAPIARegs.ISPRITE_PLAYER0].x
+            TIAPIARegs.RESMP1 -> sprites[TIAPIARegs.ISPRITE_MISSILE1].x = sprites[TIAPIARegs.ISPRITE_PLAYER1].x
 
             // Unknown or unimplemented registers print warning
             else -> println("TIA register $address not implemented!")
@@ -398,5 +407,11 @@ class TIA ( ) {
 
     fun renderScanline() {
         while (!nextClockTick()) /* run clock until scanline finished */;
+    }
+
+    fun runToClock(targetColorClock:Int) {
+        assert((targetColorClock >= 0) and (targetColorClock < 228))
+        while (colorClock != targetColorClock)
+            nextClockTick()
     }
 }

@@ -29,9 +29,23 @@ class TIATester : Application() {
         }
     }
 
+    /**
+     * Convert the TIA raster line to the appropriate pixel data and apply to the raster image at the appropriate line.
+     */
     private fun rasterizeTIA(pixelWriter: PixelWriter, scanline:Int, data:Array<Int>) {
         for (cntr in 0..159)
             pixelWriter.setArgb(cntr, scanline, tiaColors.getARGB(data[cntr]))
+    }
+
+    /** Convienience function that renders the line then rasterizes it (reduces duplicated pairs of code) */
+    private fun renderThenRasterize(tia:TIA,pixelWriter: PixelWriter, scanline:Int, numCopies:Int = 1) {
+        assert(numCopies > 0)
+        assert(scanline < 192)
+        assert(scanline+numCopies < 192)
+        for (cntr in 0 until numCopies) {
+            tia.renderScanline()
+            rasterizeTIA(pixelWriter, scanline + cntr, tia.rasterLine)
+        }
     }
 
     override fun start(primaryStage: Stage?) {
@@ -270,46 +284,32 @@ class TIATester : Application() {
         tia.writeRegister(TIAPIARegs.COLUPF, 30)
         tia.writeRegister(TIAPIARegs.COLUP0, 70)
         tia.writeRegister(TIAPIARegs.COLUP1, 130)
-        tia.writeRegister(TIAPIARegs.ENABL, 2)
-        for (cntr in 0..7) {
-            tia.renderScanline()
-            rasterizeTIA(tiaImage.pixelWriter, cntr, tia.rasterLine)
-        }
-        tia.writeRegister(TIAPIARegs.ENABL, 0)
-        tia.writeRegister(TIAPIARegs.ENAM0, 2)
-        for (cntr in 8..15) {
-            tia.renderScanline()
-            rasterizeTIA(tiaImage.pixelWriter, cntr, tia.rasterLine)
-        }
-        tia.writeRegister(TIAPIARegs.ENAM0, 0)
-        tia.writeRegister(TIAPIARegs.ENAM1, 2)
-        for (cntr in 16..23) {
-            tia.renderScanline()
-            rasterizeTIA(tiaImage.pixelWriter, cntr, tia.rasterLine)
-        }
-        tia.writeRegister(TIAPIARegs.ENAM1, 0)
-        tia.writeRegister(TIAPIARegs.GRP0, 0x55)
-        for (cntr in 24..31) {
-            tia.renderScanline()
-            rasterizeTIA(tiaImage.pixelWriter, cntr, tia.rasterLine)
-        }
-        tia.writeRegister(TIAPIARegs.GRP0, 0)
-        tia.writeRegister(TIAPIARegs.GRP1, 0xAA)
-        for (cntr in 32..39) {
-            tia.renderScanline()
-            rasterizeTIA(tiaImage.pixelWriter, cntr, tia.rasterLine)
-        }
-        tia.writeRegister(TIAPIARegs.GRP1, 0)
+        // set up PMG positions - doing work on line above first displayed line
+        tia.runToClock(78)
+        tia.writeRegister(TIAPIARegs.RESBL,0)
+        tia.runToClock(88)
+        tia.writeRegister(TIAPIARegs.RESM0, 0)
+        tia.runToClock(98)
+        tia.writeRegister(TIAPIARegs.RESM1, 0)
+        tia.runToClock(108)
+        tia.writeRegister(TIAPIARegs.RESP0, 0)
+        tia.runToClock(158)
+        tia.writeRegister(TIAPIARegs.RESP1, 0)
+        tia.renderScanline()
 
-        for (cntr in 40..191) {
-            tia.renderScanline()
-            rasterizeTIA(tiaImage.pixelWriter, cntr, tia.rasterLine)
-        }
+        // set up sprite data
+        tia.writeRegister(TIAPIARegs.ENABL, 2)
+        tia.writeRegister(TIAPIARegs.ENAM0, 2)
+        tia.writeRegister(TIAPIARegs.ENAM1, 2)
+        tia.writeRegister(TIAPIARegs.GRP0, 0x55)
+        tia.writeRegister(TIAPIARegs.GRP1, 0xAA)
+        renderThenRasterize(tia, tiaImage.pixelWriter, 0, 192)
 
         val tiaView = ImageView(tiaImage)
         tiaView.isPreserveRatio = false
         tiaView.fitWidth = 640.0
         tiaView.fitHeight = 192 * 2.0
+
 //        tiaView.scaleX = 2.0
 //        tiaView.scaleY = 1.0
         val tab = Tab("PMGDrawing")
