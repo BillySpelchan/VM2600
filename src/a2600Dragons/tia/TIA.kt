@@ -106,6 +106,41 @@ object TIAPIARegs {
     const val PMG_DOUBLE_SIZE = 5
     const val PMG_THREE_MEDIUM = 6
     const val PMG_QUAD_PLAYER = 7
+
+    // Internal collision bits
+    const val ICOL_PFBL = 1
+    const val ICOL_PFP0 = 2
+    const val ICOL_PFM0 = 8
+    const val ICOL_PFP1 = 64
+    const val ICOL_PFM1 = 1024
+    const val ICOL_BLP0 = 4
+    const val ICOL_BLM0 = 16
+    const val ICOL_BLP1 = 128
+    const val ICOL_BLM1 = 2048
+    const val ICOL_P0M0 = 32
+    const val ICOL_P0P1 = 256
+    const val ICOL_P0M1 = 4096
+    const val ICOL_M0P1 = 512
+    const val ICOL_M0M1 = 8192
+    const val ICOL_P1M1 = 16384
+
+    // internal sprite indexes
+    const val ISPRITE_BALL = 0
+    const val ISPRITE_PLAYER1 = 1
+    const val ISPRITE_MISSILE1 = 2
+    const val ISPRITE_PLAYER0 = 3
+    const val ISPRITE_MISSILE0 = 4
+
+    /*
+        Playfield	Ball	Player 0	Missile 0	Player 1
+   Playfield	X	1	2	8	64	1024
+   Ball	    1	X	4	16	128	2048
+   Player0	    2	4	X	32	256	4096
+   Missile0	8	16	32	X	512	8192
+   Player1 	64	128	256	512	X	16384
+   Missile1    1024	2048	4096	8192	16384	X
+
+     */
 }
 
 class TIAColors() {
@@ -233,10 +268,28 @@ class TIA ( ) {
     // playfield
     var playfieldBits:Int = 0
     var mirror = true
+    var scoreMode = false
+    var priorityPlayfield = false
+
+    // sprites (Player Missile Graphics in Atari parlance)
+    val sprites = arrayOf(PlayerMissileGraphic(1, 30570), // Ball
+            PlayerMissileGraphic(8, 15423), // Player 1
+            PlayerMissileGraphic(1, 1023), // Missile 1
+            PlayerMissileGraphic(8, 28377), // Player 0
+            PlayerMissileGraphic(1, 24007) ) // Missile 0
+    var collisonState = 0
+
 
     // raster data
     var rasterLine:Array<Int> = Array<Int>(160, {_->0})
 
+    // *****************
+    // ***** METHODS ***
+    // *****************
+
+    /**
+     * Inbternal method to reverse the bits in a byte
+     */
     fun reversePFBits(value:Int):Int {
         var reversed = 0
         var testBit = 1
@@ -248,12 +301,17 @@ class TIA ( ) {
         return reversed
     }
 
+    /**
+     * Handle a write to one of the TIA registers by doing the appropriate internal work.
+     */
     fun writeRegister(address:Int, value:Int) {
         when (address) {
+            // color control registers
             TIAPIARegs.COLUBK -> backgroundColor = value
             TIAPIARegs.COLUPF -> playfieldBallColor = value
             TIAPIARegs.COLUP0 -> playerMissile0Color = value
             TIAPIARegs.COLUP1 -> playerMissile1Color = value
+            // Playfield registers
             TIAPIARegs.PF0 -> {
                 var bits = reversePFBits(value)
                 playfieldBits = (playfieldBits and 0xFFFF) or (bits shl(16))
@@ -266,6 +324,22 @@ class TIA ( ) {
                 var bits = reversePFBits(value)
                 playfieldBits = (playfieldBits and 0xFFF00) or bits
             }
+            TIAPIARegs.CTRLPF -> {
+                mirror = (value and 1) == 1             // bit 0 handles mirror mode
+                scoreMode = (value and 2) == 2          // bit 1 handles mirror mode
+                priorityPlayfield = (value and 4) == 4  // bit 2 handles mirror mode
+
+                val ballSize = (value shr 4) and 3      // bits 4 and 5 are ball size (scale)
+                sprites[TIAPIARegs.ISPRITE_BALL].scale = 1 shl ballSize
+            }
+            // Player Missile Graphics (PMG) drawing enable/data
+            TIAPIARegs.ENABL -> sprites[TIAPIARegs.ISPRITE_BALL].drawingBits = if ((value and 2) == 2) 1 else 0
+            TIAPIARegs.ENAM0 -> sprites[TIAPIARegs.ISPRITE_MISSILE0].drawingBits = if ((value and 2) == 2) 1 else 0
+            TIAPIARegs.ENAM1 -> sprites[TIAPIARegs.ISPRITE_MISSILE1].drawingBits = if ((value and 2) == 2) 1 else 0
+            TIAPIARegs.GRP0 -> sprites[TIAPIARegs.ISPRITE_PLAYER0].drawingBits = value and 255
+            TIAPIARegs.GRP1 -> sprites[TIAPIARegs.ISPRITE_PLAYER1].drawingBits = value and 255
+
+            // Unknown or unimplemented registers print warning
             else -> println("TIA register $address not implemented!")
         }
     }
@@ -282,14 +356,36 @@ class TIA ( ) {
         val column = colorClock - 68
         if (column >= 0) {
             var pixelColor = backgroundColor
+            var collisionMask = 32767
 
             // render playfield
             val pfCol = if (column < 80) column / 4 else
                 if (mirror) (159 - column) / 4 else (column - 80) / 4
             var pfPixelMask = 0x80000 shr pfCol
-            pixelColor = if ((playfieldBits and pfPixelMask) > 0) playfieldBallColor else pixelColor
+            pixelColor = if ((playfieldBits and pfPixelMask) > 0) {
+                playfieldBallColor
+            } else {
+                collisionMask = collisionMask and 31668
+                pixelColor
+            }
 
-            // TODO render player-missile graphics and set collisions
+            pixelColor = if (sprites[0].isPixelDrawn(column)) playfieldBallColor else {
+                collisionMask = collisionMask and sprites[0].collisionMask
+                pixelColor}
+            pixelColor = if (sprites[1].isPixelDrawn(column)) playerMissile1Color else {
+                collisionMask = collisionMask and sprites[1].collisionMask
+                pixelColor}
+            pixelColor = if (sprites[2].isPixelDrawn(column)) playerMissile1Color else {
+                collisionMask = collisionMask and sprites[2].collisionMask
+                pixelColor}
+            pixelColor = if (sprites[3].isPixelDrawn(column)) playerMissile0Color else {
+                collisionMask = collisionMask and sprites[3].collisionMask
+                pixelColor}
+            pixelColor = if (sprites[4].isPixelDrawn(column)) playerMissile0Color else {
+                collisionMask = collisionMask and sprites[4].collisionMask
+                pixelColor}
+
+            collisonState = collisonState or collisionMask
 
             rasterLine[column] = pixelColor
         }

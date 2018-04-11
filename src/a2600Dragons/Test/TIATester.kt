@@ -1,5 +1,6 @@
 package a2600Dragons.Test
 
+import a2600Dragons.tia.PlayerMissileGraphic
 import a2600Dragons.tia.TIA
 import a2600Dragons.tia.TIAColors
 import a2600Dragons.tia.TIAPIARegs
@@ -37,6 +38,7 @@ class TIATester : Application() {
 //        var btn = Button("Hello JavaFX")
 //        btn.setOnAction { message.text = "Hello World!" }
         val tabs = TabPane()
+        tabs.tabs.add(buildPMGTab())
         tabs.tabs.add(buildTIAConsoleTab())
         tabs.tabs.add(buildColorpickerTab())
         tabs.tabs.add(buildRainbowTab())
@@ -112,6 +114,112 @@ class TIATester : Application() {
 
     }
 
+    /**
+     * tests a "Sprite" aka Player/Missile Graphics to see if it draws where it is expected to draw
+     * expects the expected pixel array to have values between 0 and 159 with no duplicates
+     */
+    private fun pmgTestPixels(pmg:PlayerMissileGraphic, expectedPixels:Array<Int>,
+            testLog:StringBuilder):Boolean {
+        var drawCount = 0
+        var successfulTest = true
+        // count number of pixels drawn while making sure they are suppose to be drawn
+        for (cntr in 0..159) {
+            if (pmg.isPixelDrawn(cntr)) {
+                ++drawCount
+                if (expectedPixels.contains(cntr) == false) {
+                    successfulTest = false
+                    testLog.append("drew in unexpected column $cntr\n")
+                    --drawCount
+                    break
+                }
+            }
+        }
+
+        // verify all pixels were drawn
+        if (drawCount != expectedPixels.size) {
+            successfulTest = false
+            testLog.append("did not draw all expected pixels\n")
+        }
+
+        if (successfulTest)
+            testLog.append("Test succeeded\n")
+
+        return successfulTest
+    }
+
+
+    private fun runPMGTests(verbose:Boolean):String {
+        var text = "Player Missile Graphics internal class\n"
+        val testLog = StringBuilder()
+        val missile = PlayerMissileGraphic(1, 0)
+        var allTestsPassed = true
+
+        testLog.append("Missile normal drawing ")
+        missile.drawingBits = 1
+        missile.x = 11
+        allTestsPassed = allTestsPassed and pmgTestPixels(missile, arrayOf(11), testLog)
+
+        testLog.append("Missile scale x2 drawing ")
+        missile.scale = 2
+        allTestsPassed = allTestsPassed and pmgTestPixels(missile, arrayOf(11,12), testLog)
+
+        testLog.append("Missile scale x4 drawing ")
+        missile.scale = 4
+        allTestsPassed = allTestsPassed and pmgTestPixels(missile, arrayOf(11,12,13,14), testLog)
+
+        testLog.append("Missile scale x8 drawing ")
+        missile.scale = 8
+        allTestsPassed = allTestsPassed and pmgTestPixels(missile, arrayOf(11,12,13,14,15,16,17,18), testLog)
+
+        testLog.append("Missile disabled drawing ")
+        missile.drawingBits = 0
+        allTestsPassed = allTestsPassed and pmgTestPixels(missile, emptyArray(), testLog)
+
+        val player = PlayerMissileGraphic(8,0)
+        player.drawingBits = 0xA2
+        player.x = 42
+        testLog.append("Player mode normal")
+        allTestsPassed = allTestsPassed and pmgTestPixels(player, arrayOf(42,44,48), testLog)
+
+        player.setPlayerScaleCopy(TIAPIARegs.PMG_DOUBLE_SIZE)
+        testLog.append("Player mode double size")
+        allTestsPassed = allTestsPassed and pmgTestPixels(player, arrayOf(42,43,46,47,54,55), testLog)
+
+        player.setPlayerScaleCopy(TIAPIARegs.PMG_QUAD_PLAYER)
+        testLog.append("Player mode Quad size")
+        allTestsPassed = allTestsPassed and pmgTestPixels(player, arrayOf(42,43,44,45, 50,51,52,53, 66,67,68,69), testLog)
+
+        player.setPlayerScaleCopy(TIAPIARegs.PMG_TWO_CLOSE)
+        testLog.append("Player mode Two close")
+        allTestsPassed = allTestsPassed and pmgTestPixels(player, arrayOf(42,44,48, 58,60,64), testLog)
+
+        player.setPlayerScaleCopy(TIAPIARegs.PMG_TWO_MEDIUM)
+        testLog.append("Player mode Two Medium")
+        allTestsPassed = allTestsPassed and pmgTestPixels(player, arrayOf(42,44,48, 74,76,80), testLog)
+
+        player.setPlayerScaleCopy(TIAPIARegs.PMG_TWO_WIDE)
+        testLog.append("Player mode Two Wide")
+        allTestsPassed = allTestsPassed and pmgTestPixels(player, arrayOf(42,44,48, 106,108,112), testLog)
+
+        player.setPlayerScaleCopy(TIAPIARegs.PMG_THREE_CLOSE)
+        testLog.append("Player mode Three close")
+        allTestsPassed = allTestsPassed and pmgTestPixels(player, arrayOf(42,44,48, 58,60,64, 74,76,80), testLog)
+
+        player.setPlayerScaleCopy(TIAPIARegs.PMG_THREE_MEDIUM)
+        testLog.append("Player mode Three Medium")
+        allTestsPassed = allTestsPassed and pmgTestPixels(player, arrayOf(42,44,48, 74,76,80, 106,108,112), testLog)
+
+        player.setPlayerScaleCopy(TIAPIARegs.PMG_THREE_MEDIUM)
+        player.mirror = true
+        testLog.append("Player mode Three Medium Mirrored")
+        allTestsPassed = allTestsPassed and pmgTestPixels(player, arrayOf(43,47,49, 75,79,81, 107,111,113), testLog)
+
+        if (verbose)
+            text += testLog.toString()
+        text += if (allTestsPassed) "PMG class tests passed!" else "PMG class tests FAILED!"
+        return text
+    }
+
     private fun consoleTests(verbose:Boolean):String {
         val tia = TIA()
         var text = "run tests in verbose mode: ${verbose}\n"
@@ -128,6 +236,7 @@ class TIATester : Application() {
         tia.writeRegister(TIAPIARegs.PF2, 0xAA)
         text += "PLAYFEILD - ODD Bits : ${tia.playfieldBits.toString(2)}\n"
 
+        text += runPMGTests(true) // forcing verbose for now
         return text
     }
 
@@ -147,6 +256,67 @@ class TIATester : Application() {
         tab.content = root
         tab.isClosable = false
         return tab
+    }
+
+    private fun buildPMGTab():Tab {
+
+        val tiaImage = WritableImage(160, 192)
+        val tia = TIA()
+        tia.writeRegister(TIAPIARegs.PF0, 0x0)
+        tia.writeRegister(TIAPIARegs.PF1, 0x0)
+        tia.writeRegister(TIAPIARegs.PF2, 0x0)
+
+        // set up colors
+        tia.writeRegister(TIAPIARegs.COLUPF, 30)
+        tia.writeRegister(TIAPIARegs.COLUP0, 70)
+        tia.writeRegister(TIAPIARegs.COLUP1, 130)
+        tia.writeRegister(TIAPIARegs.ENABL, 2)
+        for (cntr in 0..7) {
+            tia.renderScanline()
+            rasterizeTIA(tiaImage.pixelWriter, cntr, tia.rasterLine)
+        }
+        tia.writeRegister(TIAPIARegs.ENABL, 0)
+        tia.writeRegister(TIAPIARegs.ENAM0, 2)
+        for (cntr in 8..15) {
+            tia.renderScanline()
+            rasterizeTIA(tiaImage.pixelWriter, cntr, tia.rasterLine)
+        }
+        tia.writeRegister(TIAPIARegs.ENAM0, 0)
+        tia.writeRegister(TIAPIARegs.ENAM1, 2)
+        for (cntr in 16..23) {
+            tia.renderScanline()
+            rasterizeTIA(tiaImage.pixelWriter, cntr, tia.rasterLine)
+        }
+        tia.writeRegister(TIAPIARegs.ENAM1, 0)
+        tia.writeRegister(TIAPIARegs.GRP0, 0x55)
+        for (cntr in 24..31) {
+            tia.renderScanline()
+            rasterizeTIA(tiaImage.pixelWriter, cntr, tia.rasterLine)
+        }
+        tia.writeRegister(TIAPIARegs.GRP0, 0)
+        tia.writeRegister(TIAPIARegs.GRP1, 0xAA)
+        for (cntr in 32..39) {
+            tia.renderScanline()
+            rasterizeTIA(tiaImage.pixelWriter, cntr, tia.rasterLine)
+        }
+        tia.writeRegister(TIAPIARegs.GRP1, 0)
+
+        for (cntr in 40..191) {
+            tia.renderScanline()
+            rasterizeTIA(tiaImage.pixelWriter, cntr, tia.rasterLine)
+        }
+
+        val tiaView = ImageView(tiaImage)
+        tiaView.isPreserveRatio = false
+        tiaView.fitWidth = 640.0
+        tiaView.fitHeight = 192 * 2.0
+//        tiaView.scaleX = 2.0
+//        tiaView.scaleY = 1.0
+        val tab = Tab("PMGDrawing")
+        tab.content = tiaView
+        tab.isClosable = false
+        return tab
+
     }
 }
 
