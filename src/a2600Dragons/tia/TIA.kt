@@ -347,6 +347,15 @@ class TIA ( ) {
             TIAPIARegs.RESM1 -> sprites[TIAPIARegs.ISPRITE_MISSILE1].x = column
             TIAPIARegs.RESMP0 -> sprites[TIAPIARegs.ISPRITE_MISSILE0].x = sprites[TIAPIARegs.ISPRITE_PLAYER0].x
             TIAPIARegs.RESMP1 -> sprites[TIAPIARegs.ISPRITE_MISSILE1].x = sprites[TIAPIARegs.ISPRITE_PLAYER1].x
+            // PMG sprite scaling and copies
+            TIAPIARegs.NUSIZ0 -> {
+                sprites[TIAPIARegs.ISPRITE_PLAYER0].setPlayerScaleCopy(value and 7)
+                sprites[TIAPIARegs.ISPRITE_MISSILE0].scale = 1 shl ((value shr 4) and 3)
+            }
+            TIAPIARegs.NUSIZ1 -> {
+                sprites[TIAPIARegs.ISPRITE_PLAYER1].setPlayerScaleCopy(value and 7)
+                sprites[TIAPIARegs.ISPRITE_MISSILE1].scale = 1 shl ((value shr 4) and 3)
+            }
 
             // Unknown or unimplemented registers print warning
             else -> println("TIA register $address not implemented!")

@@ -303,7 +303,21 @@ class TIATester : Application() {
         tia.writeRegister(TIAPIARegs.ENAM1, 2)
         tia.writeRegister(TIAPIARegs.GRP0, 0x55)
         tia.writeRegister(TIAPIARegs.GRP1, 0xAA)
-        renderThenRasterize(tia, tiaImage.pixelWriter, 0, 192)
+
+        for (cntr in 0..3) {
+            val nusiz = (cntr shl 4) or cntr
+            tia.writeRegister(TIAPIARegs.CTRLPF, cntr shl 4)
+            tia.writeRegister(TIAPIARegs.NUSIZ0, nusiz)
+            tia.writeRegister(TIAPIARegs.NUSIZ1, nusiz)
+            renderThenRasterize(tia, tiaImage.pixelWriter, cntr*8, 8)
+        }
+        for (cntr in 4..7) {
+            val nusiz = ((7 - cntr) shl 4) or cntr
+            tia.writeRegister(TIAPIARegs.CTRLPF, (7 - cntr) shl 4)
+            tia.writeRegister(TIAPIARegs.NUSIZ0, nusiz)
+            tia.writeRegister(TIAPIARegs.NUSIZ1, nusiz)
+            renderThenRasterize(tia, tiaImage.pixelWriter, cntr*8, 8)
+        }
 
         val tiaView = ImageView(tiaImage)
         tiaView.isPreserveRatio = false
