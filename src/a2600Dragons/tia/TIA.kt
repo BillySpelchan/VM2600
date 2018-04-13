@@ -301,6 +301,11 @@ class TIA ( ) {
         return reversed
     }
 
+    private fun convertNibbleToSignedInt(nibble:Int):Int {
+        val nib = nibble and 15
+        return if (nib > 7) nib - 16 else nib
+    }
+
     /**
      * Handle a write to one of the TIA registers by doing the appropriate internal work.
      */
@@ -359,8 +364,22 @@ class TIA ( ) {
             // PMG Mirroring
             TIAPIARegs.REFP0 -> sprites[TIAPIARegs.ISPRITE_PLAYER0].mirror = (value and 8) == 8
             TIAPIARegs.REFP1 -> sprites[TIAPIARegs.ISPRITE_PLAYER1].mirror = (value and 8) == 8
+            // PMG Horizontal movement
+            TIAPIARegs.HMP0 -> sprites[TIAPIARegs.ISPRITE_PLAYER0].deltaX = convertNibbleToSignedInt(value)
+            TIAPIARegs.HMP1 -> sprites[TIAPIARegs.ISPRITE_PLAYER1].deltaX = convertNibbleToSignedInt(value)
+            TIAPIARegs.HMM0 -> sprites[TIAPIARegs.ISPRITE_MISSILE0].deltaX = convertNibbleToSignedInt(value)
+            TIAPIARegs.HMM1 -> sprites[TIAPIARegs.ISPRITE_MISSILE1].deltaX = convertNibbleToSignedInt(value)
+            TIAPIARegs.HMBL -> sprites[TIAPIARegs.ISPRITE_BALL].deltaX = convertNibbleToSignedInt(value)
+            TIAPIARegs.HMOVE -> {
+                for (cntr in 0..4)
+                    sprites[cntr].hmove()
+            }
+            TIAPIARegs.HMCLR -> {
+                for (cntr in 0..4)
+                    sprites[cntr].deltaX = 0
+            }
 
-        // Unknown or unimplemented registers print warning
+            // Unknown or unimplemented registers print warning
             else -> println("TIA register $address not implemented!")
         }
     }

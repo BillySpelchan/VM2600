@@ -317,6 +317,27 @@ class TIATester : Application() {
             tia.writeRegister(TIAPIARegs.REFP1, 0)
         }
 
+        for (cntr in 0..7) {
+            val nusiz = if (cntr < 4) (cntr shl 4) or cntr else ((7 - cntr) shl 4) or cntr
+            tia.writeRegister(TIAPIARegs.CTRLPF, nusiz and 0xFC)
+            tia.writeRegister(TIAPIARegs.NUSIZ0, nusiz)
+            tia.writeRegister(TIAPIARegs.NUSIZ1, nusiz)
+            for (hmove in 0..15) {
+                if (hmove == 8)
+                    tia.writeRegister(TIAPIARegs.HMCLR, 0)
+                else {
+                    tia.writeRegister(TIAPIARegs.HMBL, hmove)
+                    tia.writeRegister(TIAPIARegs.HMM0, hmove)
+                    tia.writeRegister(TIAPIARegs.HMM1, hmove)
+                    tia.writeRegister(TIAPIARegs.HMP0, hmove)
+                    tia.writeRegister(TIAPIARegs.HMP1, hmove)
+                }
+                // note that hmove should be executed right after HSYNC started
+                tia.writeRegister(TIAPIARegs.HMOVE, 0)
+                renderThenRasterize(tia, tiaImage.pixelWriter, 64+cntr*16+hmove, 1)
+            }
+        }
+
         val tiaView = ImageView(tiaImage)
         tiaView.isPreserveRatio = false
         tiaView.fitWidth = 640.0
