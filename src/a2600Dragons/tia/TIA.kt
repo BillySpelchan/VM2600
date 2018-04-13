@@ -356,8 +356,11 @@ class TIA ( ) {
                 sprites[TIAPIARegs.ISPRITE_PLAYER1].setPlayerScaleCopy(value and 7)
                 sprites[TIAPIARegs.ISPRITE_MISSILE1].scale = 1 shl ((value shr 4) and 3)
             }
+            // PMG Mirroring
+            TIAPIARegs.REFP0 -> sprites[TIAPIARegs.ISPRITE_PLAYER0].mirror = (value and 8) == 8
+            TIAPIARegs.REFP1 -> sprites[TIAPIARegs.ISPRITE_PLAYER1].mirror = (value and 8) == 8
 
-            // Unknown or unimplemented registers print warning
+        // Unknown or unimplemented registers print warning
             else -> println("TIA register $address not implemented!")
         }
     }
