@@ -267,7 +267,7 @@ class TIA ( ) {
 
     // playfield
     var playfieldBits:Int = 0
-    var mirror = true
+    var mirror = false
     var scoreMode = false
     var priorityPlayfield = false
 
@@ -332,8 +332,8 @@ class TIA ( ) {
             }
             TIAPIARegs.CTRLPF -> {
                 mirror = (value and 1) == 1             // bit 0 handles mirror mode
-                scoreMode = (value and 2) == 2          // bit 1 handles mirror mode
-                priorityPlayfield = (value and 4) == 4  // bit 2 handles mirror mode
+                scoreMode = (value and 2) == 2          // bit 1 handles score mode
+                priorityPlayfield = (value and 4) == 4  // bit 2 Places playfield above sprites
 
                 val ballSize = (value shr 4) and 3      // bits 4 and 5 are ball size (scale)
                 sprites[TIAPIARegs.ISPRITE_BALL].scale = 1 shl ballSize
@@ -402,12 +402,10 @@ class TIA ( ) {
             val pfCol = if (column < 80) column / 4 else
                 if (mirror) (159 - column) / 4 else (column - 80) / 4
             var pfPixelMask = 0x80000 shr pfCol
-            pixelColor = if ((playfieldBits and pfPixelMask) > 0) {
-                playfieldBallColor
-            } else {
-                collisionMask = collisionMask and 31668
-                pixelColor
-            }
+            val shouldDrawPlayfield =(playfieldBits and pfPixelMask) > 0
+            val pfColor = if (scoreMode) {if (column < 80) playerMissile0Color else playerMissile1Color } else playfieldBallColor
+            if ( ! shouldDrawPlayfield) collisionMask = collisionMask and 31668
+            if ((shouldDrawPlayfield) and ( ! priorityPlayfield )) pixelColor = pfColor
 
             pixelColor = if (sprites[0].isPixelDrawn(column)) playfieldBallColor else {
                 collisionMask = collisionMask and sprites[0].collisionMask
@@ -424,6 +422,8 @@ class TIA ( ) {
             pixelColor = if (sprites[4].isPixelDrawn(column)) playerMissile0Color else {
                 collisionMask = collisionMask and sprites[4].collisionMask
                 pixelColor}
+
+            if ((shouldDrawPlayfield) and (priorityPlayfield)) pixelColor = pfColor
 
             collisonState = collisonState or collisionMask
 

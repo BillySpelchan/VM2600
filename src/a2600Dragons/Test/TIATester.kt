@@ -98,22 +98,52 @@ class TIATester : Application() {
 
         val tiaImage = WritableImage(160, 192)
         val tia = TIA()
+        // set up simple checker pattern
         tia.writeRegister(TIAPIARegs.PF0, 0x50)
         tia.writeRegister(TIAPIARegs.PF1, 0xAA)
         tia.writeRegister(TIAPIARegs.PF2, 0x55)
         tia.writeRegister(TIAPIARegs.COLUPF, 96)
+        // run through tia colors
         for (cntr in 0..127) {
             tia.writeRegister(TIAPIARegs.COLUBK, cntr * 2)
             tia.renderScanline()
             rasterizeTIA(tiaImage.pixelWriter, cntr, tia.rasterLine)
         }
+        // flip checker pattern
         tia.writeRegister(TIAPIARegs.PF0, 0xA0)
         tia.writeRegister(TIAPIARegs.PF1, 0x55)
         tia.writeRegister(TIAPIARegs.PF2, 0xAA)
-        for (cntr in 128..191) {
-            tia.renderScanline()
-            rasterizeTIA(tiaImage.pixelWriter, cntr, tia.rasterLine)
-        }
+        tia.writeRegister(TIAPIARegs.COLUBK, 4)
+        renderThenRasterize(tia, tiaImage.pixelWriter, 128, 8)
+        // set up sprites
+        tia.writeRegister(TIAPIARegs.COLUP0, 30)
+        tia.writeRegister(TIAPIARegs.COLUP1, 142)
+        tia.writeRegister(TIAPIARegs.ENAM0, 2)
+        tia.writeRegister(TIAPIARegs.ENAM1, 2)
+        tia.writeRegister(TIAPIARegs.GRP0, 0x55)
+        tia.writeRegister(TIAPIARegs.GRP1, 0xAA)
+        // cheat with setting up sprite positions
+        tia.sprites[TIAPIARegs.ISPRITE_MISSILE0].x = 20
+        tia.sprites[TIAPIARegs.ISPRITE_MISSILE1].x = 118
+        tia.sprites[TIAPIARegs.ISPRITE_PLAYER0].x = 138
+        tia.sprites[TIAPIARegs.ISPRITE_PLAYER1].x = 40
+
+        // test different playfield modes
+        tia.writeRegister(TIAPIARegs.CTRLPF, 1)
+        renderThenRasterize(tia, tiaImage.pixelWriter, 136, 8)
+        tia.writeRegister(TIAPIARegs.CTRLPF, 2)
+        renderThenRasterize(tia, tiaImage.pixelWriter, 144, 8)
+        tia.writeRegister(TIAPIARegs.CTRLPF, 3)
+        renderThenRasterize(tia, tiaImage.pixelWriter, 152, 8)
+        tia.writeRegister(TIAPIARegs.CTRLPF, 4)
+        renderThenRasterize(tia, tiaImage.pixelWriter, 160, 8)
+        tia.writeRegister(TIAPIARegs.CTRLPF, 5)
+        renderThenRasterize(tia, tiaImage.pixelWriter, 168, 8)
+        tia.writeRegister(TIAPIARegs.CTRLPF, 6)
+        renderThenRasterize(tia, tiaImage.pixelWriter, 176, 8)
+        tia.writeRegister(TIAPIARegs.CTRLPF, 7)
+        renderThenRasterize(tia, tiaImage.pixelWriter, 184, 8)
+
 
         val tiaView = ImageView(tiaImage)
         tiaView.isPreserveRatio = false
