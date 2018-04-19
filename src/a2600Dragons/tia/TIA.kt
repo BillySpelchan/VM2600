@@ -378,17 +378,36 @@ class TIA ( ) {
                 for (cntr in 0..4)
                     sprites[cntr].deltaX = 0
             }
+            // collision handling clear
+            TIAPIARegs.CXCLR -> collisonState = 0
 
             // Unknown or unimplemented registers print warning
             else -> println("TIA register $address not implemented!")
         }
     }
 
-/*
-    fun readRegister(address:Int) {
-
+    private fun buildCollisionByte(bit7mask:Int, bit6mask:Int):Int {
+        val bit7 = if ((collisonState and bit7mask) == bit7mask) 128 else 0
+        val bit6 = if ((collisonState and bit6mask) == bit6mask) 64 else 0
+        return bit7 or bit6
     }
-*/
+
+    fun readRegister(address:Int):Int {
+        return when(address) {
+            TIAPIARegs.CXBLPF -> buildCollisionByte(TIAPIARegs.ICOL_PFBL,0)
+            TIAPIARegs.CXM0FB -> buildCollisionByte(TIAPIARegs.ICOL_PFM0, TIAPIARegs.ICOL_BLM0)
+            TIAPIARegs.CXM1FB -> buildCollisionByte(TIAPIARegs.ICOL_PFM1, TIAPIARegs.ICOL_BLM1)
+            TIAPIARegs.CXM0P -> buildCollisionByte(TIAPIARegs.ICOL_P0M0, TIAPIARegs.ICOL_M0P1)
+            TIAPIARegs.CXM1P -> buildCollisionByte(TIAPIARegs.ICOL_P0M1, TIAPIARegs.ICOL_P1M1)
+            TIAPIARegs.CXP0FB -> buildCollisionByte(TIAPIARegs.ICOL_PFP0, TIAPIARegs.ICOL_BLP0)
+            TIAPIARegs.CXP1FB -> buildCollisionByte(TIAPIARegs.ICOL_PFP1, TIAPIARegs.ICOL_BLP1)
+            TIAPIARegs.CXPPMM -> buildCollisionByte(TIAPIARegs.ICOL_P0P1, TIAPIARegs.ICOL_M0M1)
+
+        // Unknown or unimplemented registers print warning
+            else -> { println("TIA register $address not implemented!"); 0}
+        }
+    }
+
 
     // return true when scanline complete, false otherwise
     fun nextClockTick():Boolean {

@@ -52,8 +52,8 @@ class TIATester : Application() {
 //        var btn = Button("Hello JavaFX")
 //        btn.setOnAction { message.text = "Hello World!" }
         val tabs = TabPane()
-        tabs.tabs.add(buildPMGTab())
         tabs.tabs.add(buildTIAConsoleTab())
+        tabs.tabs.add(buildPMGTab())
         tabs.tabs.add(buildColorpickerTab())
         tabs.tabs.add(buildRainbowTab())
         val scene = Scene(tabs, SCENE_WIDTH, SCENE_HEIGHT)
@@ -264,6 +264,93 @@ class TIATester : Application() {
         return text
     }
 
+
+    /** Loop through possible collisions and verify only collisions that happened happen and that the ones that doe
+     * happen are detectable     */
+    private fun runPMGCollisionTests(verbose:Boolean):String {
+        var text = "PMG Collision Tests\n"
+        val tia = TIA()
+        for (cntr in 0..63) {
+            val isPlayfield = (cntr and 1) == 1
+            val isBall = (cntr and 2) == 2
+            val isPlayer0 = (cntr and 4) == 4
+            val isMissile0 = (cntr and 8) == 8
+            val isPlayer1 = (cntr and 16) == 16
+            val isMissile1 = (cntr and 32) == 32
+
+            // set up "display" sprites counting expected number of overlaps
+            tia.writeRegister(TIAPIARegs.PF0, if (isPlayfield) 0xFF else 0)
+            tia.writeRegister(TIAPIARegs.ENABL, if (isBall) 0xFF else 0)
+            tia.writeRegister(TIAPIARegs.GRP0, if (isPlayer0) 0xFF else 0)
+            tia.writeRegister(TIAPIARegs.ENAM0, if (isMissile0) 0xFF else 0)
+            tia.writeRegister(TIAPIARegs.GRP1, if (isPlayer1) 0xFF else 0)
+            tia.writeRegister(TIAPIARegs.ENAM1, if (isMissile1) 0xFF else 0)
+            if (verbose) text += " $cntr playfield:$isPlayfield ball:$isBall player0:$isPlayer0 missile0:$isMissile0 player1:$isPlayer1 missile1:$isMissile1\n"
+
+            // clear collisions then render scanline to get test results
+            tia.writeRegister(TIAPIARegs.CXCLR, 0)
+            tia.renderScanline()
+
+            // check the CX registers and see if the appropriate bits have been set for the 15 tests always log fail
+            // CXBLPF - Collision between ball and playfield
+            var cxResult = tia.readRegister(TIAPIARegs.CXBLPF)
+            val ballHitPlayfieldTest = (cxResult and 128 == 128) == ((cntr and 3) == 3)
+            if (verbose or !ballHitPlayfieldTest) text += "  ball hit playfield test $cntr: ${ballHitPlayfieldTest}\n"
+
+            // CXM0FB - Collision between missile0 and  ball or playfield
+            cxResult= tia.readRegister(TIAPIARegs.CXM0FB)
+            val missile0HitPlayfield = (cxResult and 128 == 128) == ((cntr and 9) == 9)
+            if (verbose or !missile0HitPlayfield) text += "  Missile0 hit playfield test $cntr: ${missile0HitPlayfield}\n"
+            val missile0HitBall = (cxResult and 64 == 64) == ((cntr and 10) == 10)
+            if (verbose or !missile0HitBall) text += "  missile0 hit ball test $cntr: ${missile0HitBall}\n"
+
+            // CXM1FB - Collision between missile1 and  ball or playfield
+            cxResult= tia.readRegister(TIAPIARegs.CXM1FB)
+            val missile1HitPlayfield = (cxResult and 128 == 128) == ((cntr and 33) == 33)
+            if (verbose or !missile1HitPlayfield) text += "  Missile1 hit playfield test $cntr: ${missile1HitPlayfield}\n"
+            val missile1HitBall = (cxResult and 64 == 64) == ((cntr and 34) == 34)
+            if (verbose or !missile1HitBall) text += "  missile1 hit ball test $cntr: ${missile1HitBall}\n"
+
+            // CXM0P - Collision between missile0 and  either player sprite
+            cxResult= tia.readRegister(TIAPIARegs.CXM0P)
+            val missile0HitPlayer0 = (cxResult and 128 == 128) == ((cntr and 12) == 12)
+            if (verbose or !missile0HitPlayer0) text += "  Missile0 hit player0 test $cntr: ${missile0HitPlayer0}\n"
+            val missile0HitPlayer1 = (cxResult and 64 == 64) == ((cntr and 24) == 24)
+            if (verbose or !missile0HitPlayer1) text += "  missile0 hit player1 test $cntr: ${missile0HitPlayer1}\n"
+
+            // CXM1P - Collision between missile1 and  either player sprite
+            cxResult= tia.readRegister(TIAPIARegs.CXM1P)
+            val missile1HitPlayer0 = (cxResult and 128 == 128) == ((cntr and 36) == 36)
+            if (verbose or !missile1HitPlayer0) text += "  Missile1 hit player0 test $cntr: ${missile1HitPlayer0}\n"
+            val missile1HitPlayer1 = (cxResult and 64 == 64) == ((cntr and 48) == 48)
+            if (verbose or !missile1HitPlayer1) text += "  missile1 hit player1 test $cntr: ${missile1HitPlayer1}\n"
+
+            // CXP0FB - Collision between player 0 and playfield or ball
+            cxResult= tia.readRegister(TIAPIARegs.CXP0FB)
+            val player0HitPlayfield = (cxResult and 128 == 128) == ((cntr and 5) == 5)
+            if (verbose or !player0HitPlayfield) text += "  player0 hit playfield test $cntr: ${player0HitPlayfield}\n"
+            val player0HitBall = (cxResult and 64 == 64) == ((cntr and 6) == 6)
+            if (verbose or !player0HitBall) text += "  player0 hit ball test $cntr: ${player0HitBall}\n"
+
+            // CXP1FB - Collision between player1 and playfield or ball
+            cxResult= tia.readRegister(TIAPIARegs.CXP1FB)
+            val player1HitPlayfield = (cxResult and 128 == 128) == ((cntr and 17) == 17)
+            if (verbose or !player1HitPlayfield) text += "  player1 hit playfield test $cntr: ${player1HitPlayfield}\n"
+            val player1HitBall = (cxResult and 64 == 64) == ((cntr and 18) == 18)
+            if (verbose or !player1HitBall) text += "  player1 hit ball test $cntr: ${player1HitBall}\n"
+
+            // CXPPMM - Collision between players or between missiles
+            cxResult= tia.readRegister(TIAPIARegs.CXPPMM)
+            val player0HitPlayer1 = (cxResult and 128 == 128) == ((cntr and 20) == 20)
+            if (verbose or !player0HitPlayer1) text += "  players hit each other test $cntr: ${player0HitPlayer1}\n"
+            val missile0HitMissile1 = (cxResult and 64 == 64) == ((cntr and 40) == 40)
+            if (verbose or !missile0HitMissile1) text += "  Missiles hit each other test $cntr: ${missile0HitMissile1}\n"
+
+        }
+
+        return text
+    }
+
     private fun consoleTests(verbose:Boolean):String {
         val tia = TIA()
         var text = "run tests in verbose mode: ${verbose}\n"
@@ -280,7 +367,8 @@ class TIATester : Application() {
         tia.writeRegister(TIAPIARegs.PF2, 0xAA)
         text += "PLAYFEILD - ODD Bits : ${tia.playfieldBits.toString(2)}\n"
 
-        text += runPMGTests(true) // forcing verbose for now
+        text += runPMGTests(verbose)
+        text += runPMGCollisionTests(verbose)
         return text
     }
 
