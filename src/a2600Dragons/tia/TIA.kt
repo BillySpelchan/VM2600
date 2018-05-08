@@ -365,11 +365,11 @@ class TIA ( ) {
             TIAPIARegs.REFP0 -> sprites[TIAPIARegs.ISPRITE_PLAYER0].mirror = (value and 8) == 8
             TIAPIARegs.REFP1 -> sprites[TIAPIARegs.ISPRITE_PLAYER1].mirror = (value and 8) == 8
             // PMG Horizontal movement
-            TIAPIARegs.HMP0 -> sprites[TIAPIARegs.ISPRITE_PLAYER0].deltaX = convertNibbleToSignedInt(value)
-            TIAPIARegs.HMP1 -> sprites[TIAPIARegs.ISPRITE_PLAYER1].deltaX = convertNibbleToSignedInt(value)
-            TIAPIARegs.HMM0 -> sprites[TIAPIARegs.ISPRITE_MISSILE0].deltaX = convertNibbleToSignedInt(value)
-            TIAPIARegs.HMM1 -> sprites[TIAPIARegs.ISPRITE_MISSILE1].deltaX = convertNibbleToSignedInt(value)
-            TIAPIARegs.HMBL -> sprites[TIAPIARegs.ISPRITE_BALL].deltaX = convertNibbleToSignedInt(value)
+            TIAPIARegs.HMP0 -> sprites[TIAPIARegs.ISPRITE_PLAYER0].deltaX = convertNibbleToSignedInt(value shr 4)
+            TIAPIARegs.HMP1 -> sprites[TIAPIARegs.ISPRITE_PLAYER1].deltaX = convertNibbleToSignedInt(value shr 4)
+            TIAPIARegs.HMM0 -> sprites[TIAPIARegs.ISPRITE_MISSILE0].deltaX = convertNibbleToSignedInt(value shr 4)
+            TIAPIARegs.HMM1 -> sprites[TIAPIARegs.ISPRITE_MISSILE1].deltaX = convertNibbleToSignedInt(value shr 4)
+            TIAPIARegs.HMBL -> sprites[TIAPIARegs.ISPRITE_BALL].deltaX = convertNibbleToSignedInt(value shr 4)
             TIAPIARegs.HMOVE -> {
                 for (cntr in 0..4)
                     sprites[cntr].hmove()

@@ -444,11 +444,11 @@ class TIATester : Application() {
                 if (hmove == 8)
                     tia.writeRegister(TIAPIARegs.HMCLR, 0)
                 else {
-                    tia.writeRegister(TIAPIARegs.HMBL, hmove)
-                    tia.writeRegister(TIAPIARegs.HMM0, hmove)
-                    tia.writeRegister(TIAPIARegs.HMM1, hmove)
-                    tia.writeRegister(TIAPIARegs.HMP0, hmove)
-                    tia.writeRegister(TIAPIARegs.HMP1, hmove)
+                    tia.writeRegister(TIAPIARegs.HMBL, hmove shl 4)
+                    tia.writeRegister(TIAPIARegs.HMM0, hmove shl 4)
+                    tia.writeRegister(TIAPIARegs.HMM1, hmove shl 4)
+                    tia.writeRegister(TIAPIARegs.HMP0, hmove shl 4)
+                    tia.writeRegister(TIAPIARegs.HMP1, hmove shl 4)
                 }
                 // note that hmove should be executed right after HSYNC started
                 tia.writeRegister(TIAPIARegs.HMOVE, 0)
