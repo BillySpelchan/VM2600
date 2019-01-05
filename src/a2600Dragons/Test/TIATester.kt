@@ -49,18 +49,18 @@ class TIATester : Application() {
     }
 
     override fun start(primaryStage: Stage?) {
-//        var btn = Button("Hello JavaFX")
+            //        var btn = Button("Hello JavaFX")
 //        btn.setOnAction { message.text = "Hello World!" }
-        val tabs = TabPane()
-        tabs.tabs.add(buildTIAConsoleTab())
-        tabs.tabs.add(buildPMGTab())
-        tabs.tabs.add(buildColorpickerTab())
-        tabs.tabs.add(buildRainbowTab())
-        val scene = Scene(tabs, SCENE_WIDTH, SCENE_HEIGHT)
+            val tabs = TabPane()
+            tabs.tabs.add(buildTIAConsoleTab())
+            tabs.tabs.add(buildPMGTab())
+            tabs.tabs.add(buildColorpickerTab())
+            tabs.tabs.add(buildRainbowTab())
+            val scene = Scene(tabs, SCENE_WIDTH, SCENE_HEIGHT)
 
-        primaryStage!!.title = "JavaFX test"
-        primaryStage.scene = scene
-        primaryStage.show()
+            primaryStage!!.title = "JavaFX test"
+            primaryStage.scene = scene
+            primaryStage.show()
     }
 
     private fun buildColorpickerTab(): Tab {
