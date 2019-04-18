@@ -52,6 +52,17 @@ data class ProcessorState(var acc:Int, var x:Int, var y:Int, var ip:Int, var fla
             }
         }
     }
+
+    fun copyState(src:ProcessorState) {
+        acc = src.acc
+        x = src.x
+        y = src.y
+        ip = src.ip
+        flags = src.flags
+        sp = src.sp
+        tick = src.tick
+        ipNext = src.ipNext
+    }
 }
 
 @Suppress("MemberVisibilityCanPrivate")
